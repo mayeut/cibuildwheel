@@ -1,6 +1,7 @@
 from __future__ import print_function
 import os, tempfile, subprocess, shutil, sys
 from collections import namedtuple
+from contextlib import contextmanager
 from glob import glob
 
 try:
@@ -14,42 +15,86 @@ except ImportError:
     from urllib2 import urlopen
 
 from .util import prepare_command, get_build_verbosity_extra_flags
+if hasattr(sys, 'getwindowsversion'):
+    from ._vendored.pep514tools import findone as _pep514_findone
 
 
 IS_RUNNING_ON_AZURE = os.path.exists('C:\\hostedtoolcache')
 IS_RUNNING_ON_TRAVIS = os.environ.get('TRAVIS_OS_NAME') == 'windows'
+IS_RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR', 'false').lower() == 'true'
+
+
+@contextmanager
+def _mkdtemp():
+    path = tempfile.mkdtemp()
+    try:
+        yield path
+    finally:
+        shutil.rmtree(path)
 
 
 def get_python_path(config):
-    nuget_args = get_nuget_args(config)
-    return os.path.join(nuget_args[-1], nuget_args[0] + "." + config.version, "tools")
+    major, minor = config.version.split('.')[:2]
 
+    if (int(major), int(minor)) < (3, 5):
+        if IS_RUNNING_ON_AZURE:
+            # We can't hard-code the paths because on Azure, we don't know which
+            # bugfix release of Python we are getting so we need to check which
+            # ones exist. We just use the first one that is found since there should
+            # only be one.
+            path_pattern = 'C:\\hostedtoolcache\\windows\\Python\\{version}\\{arch}'.format(
+                version=config.version.replace('x', '*'),
+                arch='x86' if config.arch == '32' else 'x64'
+            )
+            matches = glob(path_pattern)
+            if len(matches) > 0:
+                return matches[0]
+        elif IS_RUNNING_ON_APPVEYOR:
+            # We're running on AppVeyor
+            major, minor = config.version.split('.')[:2]
+            python_path = 'C:\\Python{major}{minor}{arch}'.format(
+                major=major,
+                minor=minor,
+                arch = '-x64' if config.arch == '64' else ''
+            )
+            if os.path.exists(python_path):
+                return python_path
+    else:
+        tag = '{major}.{minor}{arch}'.format(
+            major=major,
+            minor=minor,
+            arch = '-32' if config.arch == '32' else ''
+        )
+        python_install = _pep514_findone('PythonCore', tag)
+        if python_install and hasattr(python_install.info, 'install_path'):
+            return str(getattr(python_install.info.install_path, ''))
+    python_path = 'C:\\cibuildwheel\\Python{major}{minor}{arch}'.format(
+        major=major,
+        minor=minor,
+        arch = '-x64' if config.arch == '64' else ''
+    )
+    return python_path
 
-def get_nuget_args(configuration):
-    python_name = "python" if configuration.version[0] == '3' else "python2"
-    if configuration.arch == "32":
-        python_name = python_name + "x86"
-    return [python_name, "-Version", configuration.version, "-OutputDirectory", "C:/cibw/python"]
 
 def get_python_configurations(build_selector):
-    PythonConfiguration = namedtuple('PythonConfiguration', ['version', 'arch', 'identifier'])
+    PythonConfiguration = namedtuple('PythonConfiguration', ['version', 'arch', 'identifier', 'url'])
     python_configurations = [
-        PythonConfiguration(version='2.7.17', arch="32", identifier='cp27-win32'),
-        PythonConfiguration(version='2.7.17', arch="64", identifier='cp27-win_amd64'),
-        PythonConfiguration(version='3.5.4', arch="32", identifier='cp35-win32'),
-        PythonConfiguration(version='3.5.4', arch="64", identifier='cp35-win_amd64'),
-        PythonConfiguration(version='3.6.8', arch="32", identifier='cp36-win32'),
-        PythonConfiguration(version='3.6.8', arch="64", identifier='cp36-win_amd64'),
-        PythonConfiguration(version='3.7.5', arch="32", identifier='cp37-win32'),
-        PythonConfiguration(version='3.7.5', arch="64", identifier='cp37-win_amd64'),
-        PythonConfiguration(version='3.8.0', arch="32", identifier='cp38-win32'),
-        PythonConfiguration(version='3.8.0', arch="64", identifier='cp38-win_amd64'),
+        PythonConfiguration(version='2.7.x', arch="32", identifier='cp27-win32', url=None),
+        PythonConfiguration(version='2.7.x', arch="64", identifier='cp27-win_amd64', url=None),
+        PythonConfiguration(version='3.5.x', arch="32", identifier='cp35-win32', url='https://www.python.org/ftp/python/3.5.4/python-3.5.4.exe'),
+        PythonConfiguration(version='3.5.x', arch="64", identifier='cp35-win_amd64', url='https://www.python.org/ftp/python/3.5.4/python-3.5.4-amd64.exe'),
+        PythonConfiguration(version='3.6.x', arch="32", identifier='cp36-win32', url='https://www.python.org/ftp/python/3.6.8/python-3.6.8.exe'),
+        PythonConfiguration(version='3.6.x', arch="64", identifier='cp36-win_amd64', url='https://www.python.org/ftp/python/3.6.8/python-3.6.8-amd64.exe'),
+        PythonConfiguration(version='3.7.x', arch="32", identifier='cp37-win32', url='https://www.python.org/ftp/python/3.7.5/python-3.7.5.exe'),
+        PythonConfiguration(version='3.7.x', arch="64", identifier='cp37-win_amd64', url='https://www.python.org/ftp/python/3.7.5/python-3.7.5-amd64.exe'),
+        PythonConfiguration(version='3.8.x', arch="32", identifier='cp38-win32',  url='https://www.python.org/ftp/python/3.8.0/python-3.8.0.exe'),
+        PythonConfiguration(version='3.8.x', arch="64", identifier='cp38-win_amd64', url='https://www.python.org/ftp/python/3.8.0/python-3.8.0-amd64.exe'),
     ]
 
     if IS_RUNNING_ON_TRAVIS:
         # cannot install VCForPython27.msi which is needed for compiling C software
         # try with (and similar): msiexec /i VCForPython27.msi ALLUSERS=1 ACCEPT=YES /passive
-        python_configurations = [c for c in python_configurations if not c.version.startswith('2.7.')]
+        python_configurations = [c for c in python_configurations if c.version != '2.7.x']
 
      # skip builds as required
     python_configurations = [c for c in python_configurations if build_selector(c.identifier)]
@@ -59,23 +104,25 @@ def get_python_configurations(build_selector):
 
 
 def build(project_dir, output_dir, test_command, test_requires, test_extras, before_build, build_verbosity, build_selector, environment):
-    def simple_shell(args, env=None, cwd=None):
-        print('+ ' + ' '.join(args))
-        args = ['cmd', '/E:ON', '/V:ON', '/C'] + args
-        return subprocess.check_call(' '.join(args), env=env, cwd=cwd)
-    def download(url, dest):
-        print('+ Download ' + url + ' to ' + dest)
-        dest_dir = os.path.dirname(dest)
-        if not os.path.exists(dest_dir):
-            os.makedirs(dest_dir)
-        response = urlopen(url)
-        try:
-            with open(dest, 'wb') as file:
-                file.write(response.read())
-        finally:
-            response.close()
+    def install(url, path):
+        with _mkdtemp() as tempdir:
+            fname = os.path.basename(url)
+            installer = os.path.join(tempdir, fname)
+            print('+ Download ' + url + ' to ' + installer)
+            response = urlopen(url)
+            try:
+                with open(installer, 'wb') as file:
+                    file.write(response.read())
+            finally:
+                response.close()
+            print('+ Installing ' + installer + ' to ' + path)
+            args = ['cmd', '/E:ON', '/V:ON', '/C', 'start', '/wait', installer, '/quiet', 'TargetDir=' + path, 'Shortcuts=0', 'Include_launcher=0', 'InstallLauncherAllUsers=0']
+            return subprocess.check_call(args)
     if IS_RUNNING_ON_AZURE or IS_RUNNING_ON_TRAVIS:
-        shell = simple_shell
+        def shell(args, env=None, cwd=None):
+            print('+ ' + ' '.join(args))
+            args = ['cmd', '/E:ON', '/V:ON', '/C'] + args
+            return subprocess.check_call(' '.join(args), env=env, cwd=cwd)
     else:
         run_with_env = os.path.abspath(os.path.join(os.path.dirname(__file__), 'resources', 'appveyor_run_with_env.cmd'))
 
@@ -91,19 +138,11 @@ def build(project_dir, output_dir, test_command, test_requires, test_extras, bef
     temp_dir = tempfile.mkdtemp(prefix='cibuildwheel')
     built_wheel_dir = os.path.join(temp_dir, 'built_wheel')
 
-    # install nuget as best way to provide python
-    nuget = 'C:\\cibw\\nuget.exe'
-    download('https://dist.nuget.org/win-x86-commandline/latest/nuget.exe', nuget)
-    # get pip fo this installation which not have.
-    get_pip_script = 'C:\\cibw\\get-pip.py'
-    download('https://bootstrap.pypa.io/get-pip.py', get_pip_script)
-
     python_configurations = get_python_configurations(build_selector)
     for config in python_configurations:
         config_python_path = get_python_path(config)
-        simple_shell([nuget, "install"] + get_nuget_args(config))
-        if not os.path.exists(os.path.join(config_python_path, 'Scripts', 'pip.exe')):
-            simple_shell([os.path.join(config_python_path, 'python.exe'), get_pip_script ])
+        if not os.path.exists(config_python_path):
+            install(config.url, config_python_path)
 
         # check python & pip exist for this configuration
         assert os.path.exists(os.path.join(config_python_path, 'python.exe'))
