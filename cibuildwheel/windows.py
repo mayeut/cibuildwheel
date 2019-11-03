@@ -17,8 +17,8 @@ except ImportError:
 from .util import prepare_command, get_build_verbosity_extra_flags
 
 
-IS_RUNNING_ON_AZURE = os.path.exists('C:\\hostedtoolcache')
 IS_RUNNING_ON_TRAVIS = os.environ.get('TRAVIS_OS_NAME') == 'windows'
+IS_RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR', 'false').lower() == 'true'
 
 
 def get_python_path(config):
@@ -86,11 +86,8 @@ def build(project_dir, output_dir, test_command, test_requires, test_extras, bef
         finally:
             response.close()
 
-    if IS_RUNNING_ON_AZURE or IS_RUNNING_ON_TRAVIS:
-        shell = simple_shell
-    else:
+    if IS_RUNNING_ON_APPVEYOR:
         run_with_env = os.path.abspath(os.path.join(os.path.dirname(__file__), 'resources', 'appveyor_run_with_env.cmd'))
-
         # run_with_env is a cmd file that sets the right environment variables
         # to build on AppVeyor.
         def shell(args, env=None, cwd=None):
@@ -98,6 +95,8 @@ def build(project_dir, output_dir, test_command, test_requires, test_extras, bef
             print('+ ' + ' '.join(args))
             args = ['cmd', '/E:ON', '/V:ON', '/C', run_with_env] + args
             return subprocess.check_call(' '.join(args), env=env, cwd=cwd)
+    else:
+        shell = simple_shell
 
     abs_project_dir = os.path.abspath(project_dir)
     temp_dir = tempfile.mkdtemp(prefix='cibuildwheel')
@@ -115,7 +114,9 @@ def build(project_dir, output_dir, test_command, test_requires, test_extras, bef
     for config in python_configurations:
         # install Python
         config_python_path = get_python_path(config)
-        simple_shell([nuget, "install"] + get_nuget_args(config))
+        if not os.path.exists(config_python_path):
+            simple_shell([nuget, "install"] + get_nuget_args(config))
+
         assert os.path.exists(os.path.join(config_python_path, 'python.exe'))
 
         # set up PATH and environment variables for run_with_env
@@ -144,6 +145,14 @@ def build(project_dir, output_dir, test_command, test_requires, test_extras, bef
         simple_shell(['python', '-m', 'pip', 'install', '--upgrade', 'pip'], env=env)
         simple_shell(['pip', '--version'], env=env)
         simple_shell(['pip', 'install', '--upgrade', 'setuptools', 'wheel'], env=env)
+
+        # setuptools does not setup the compiler correctly on GH Actions for python 3.5
+        # c.f. https://github.com/pypa/setuptools/issues/1851#issuecomment-537714885
+        # Let's patch setuptools with distutils discovery mechanism from 3.8.0
+        shutil.copyfile(
+            os.path.join(os.path.dirname(__file__), 'resources', 'msvc.py'),
+            os.path.join(config_python_path, 'Lib', 'site-packages', 'setuptools', 'msvc.py')
+        )
 
         # run the before_build command
         if before_build:

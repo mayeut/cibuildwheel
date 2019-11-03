@@ -9,7 +9,6 @@ from tempfile import mkdtemp
 from contextlib import contextmanager
 
 
-IS_WINDOWS_RUNNING_ON_AZURE = os.path.exists('C:\\hostedtoolcache')
 IS_WINDOWS_RUNNING_ON_TRAVIS = os.environ.get('TRAVIS_OS_NAME') == 'windows'
 
 
