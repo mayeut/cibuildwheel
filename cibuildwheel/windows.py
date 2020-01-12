@@ -137,12 +137,14 @@ def build(project_dir, output_dir, test_command, test_requires, test_extras, bef
         simple_shell(['where', 'python'], env=env)
         simple_shell(['python', '--version'], env=env)
         simple_shell(['python', '-c', '"import struct; print(struct.calcsize(\'P\') * 8)\"'], env=env)
-
-        print('###### os.listdir(config_python_path):', os.listdir(config_python_path))
-        print('###### os.listdir(config_python_path / Scripts):', os.listdir(os.path.join(config_python_path, 'Scripts')))
         # make sure pip is installed
         if not os.path.exists(os.path.join(config_python_path, 'Scripts', 'pip.exe')):
             simple_shell(['python', get_pip_script], env=env, cwd="C:\\cibw")
+
+        shell(['which', 'pip'])
+        print('###### os.listdir(config_python_path):', os.listdir(config_python_path))
+        print('###### os.listdir(config_python_path / Scripts):', os.listdir(os.path.join(config_python_path, 'Scripts')))
+        print('###### os.listdir(bin_dir):', os.listdir('C:\\ProgramData\\Chocolatey\\bin'))
         assert os.path.exists(os.path.join(config_python_path, 'Scripts', 'pip.exe'))
 
         # prepare the Python environment
