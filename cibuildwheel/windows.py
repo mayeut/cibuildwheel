@@ -19,6 +19,7 @@ from .util import prepare_command, get_build_verbosity_extra_flags
 
 IS_RUNNING_ON_TRAVIS = os.environ.get('TRAVIS_OS_NAME') == 'windows'
 IS_RUNNING_ON_APPVEYOR = os.environ.get('APPVEYOR', 'false').lower() == 'true'
+IS_RUNNING_ON_GITHUB_ACTIONS = os.environ.get('GITHUB_ACTIONS', 'false').lower() == 'true'
 
 
 def get_python_path(config):
@@ -113,9 +114,7 @@ def build(project_dir, output_dir, test_command, test_requires, test_extras, bef
     python_configurations = get_python_configurations(build_selector)
     for config in python_configurations:
         # install Python
-        print('###### config:', config)
         config_python_path = get_python_path(config)
-        print('###### config_python_path:', config_python_path)
         if not os.path.exists(config_python_path):
             simple_shell([nuget, "install"] + get_nuget_args(config))
 
@@ -137,16 +136,17 @@ def build(project_dir, output_dir, test_command, test_requires, test_extras, bef
         simple_shell(['where', 'python'], env=env)
         simple_shell(['python', '--version'], env=env)
         simple_shell(['python', '-c', '"import struct; print(struct.calcsize(\'P\') * 8)\"'], env=env)
-        # make sure pip is installed
-        simple_shell(['which', 'pip'], env=env)
-        simple_shell(['python', get_pip_script], env=env, cwd="C:\\cibw")
-        simple_shell(['which', 'pip'], env=env)
-        # if not os.path.exists(os.path.join(config_python_path, 'Scripts', 'pip.exe')):
-        #     simple_shell(['python', get_pip_script], env=env, cwd="C:\\cibw")
-        # assert os.path.exists(os.path.join(config_python_path, 'Scripts', 'pip.exe'))
+
+        # this breaks on github actions but pip is already installed anyway
+        if not IS_RUNNING_ON_GITHUB_ACTIONS:
+            # make sure pip is installed
+            if not os.path.exists(os.path.join(config_python_path, 'Scripts', 'pip.exe')):
+                simple_shell(['python', get_pip_script], env=env, cwd="C:\\cibw")
+            assert os.path.exists(os.path.join(config_python_path, 'Scripts', 'pip.exe'))
 
         # prepare the Python environment
         simple_shell(['python', '-m', 'pip', 'install', '--upgrade', 'pip'], env=env)
+        simple_shell(['which', 'pip'], env=env)
         simple_shell(['pip', '--version'], env=env)
         simple_shell(['pip', 'install', '--upgrade', 'setuptools', 'wheel'], env=env)
 
