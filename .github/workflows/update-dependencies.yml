@@ -1,7 +1,6 @@
 name: Update dependencies
 
-on:
-  workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
   update-dependencies:
