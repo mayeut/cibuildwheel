@@ -50,7 +50,7 @@ def test(tmp_path):
             ["pyodide build {project}/dependency", "pip install --find-links dist/ spam"]
         )
     else:
-        before_test_steps.append("python -m pip install {project}/dependency")
+        before_test_steps.append("uv pip install {project}/dependency")
 
     before_test = " && ".join(before_test_steps)
 
