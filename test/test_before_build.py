@@ -8,7 +8,7 @@ import pytest
 from . import test_projects, utils
 
 # pyodide does not support building without isolation, need to check the base_prefix
-SYS_PREFIX = f"sys.{'base_' if utils.platform == 'pyodide' else ''}prefix"
+SYS_PREFIX = "sys.base_prefix"
 
 
 project_with_before_build_asserts = test_projects.new_c_project(
