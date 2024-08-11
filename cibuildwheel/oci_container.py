@@ -166,9 +166,6 @@ class OCIContainer:
         self.cwd = cwd
         self.name: str | None = None
         self.engine = engine
-        # we need '--pull=always' otherwise some images with the wrong platform get re-used (e.g. 386 image for amd64)
-        # c.f. https://github.com/moby/moby/issues/48197#issuecomment-2282802313
-        self.platform_args = [f"--platform={oci_platform.value}", "--pull=always"]
 
         _check_minimum_engine_version(self.engine)
 
@@ -183,6 +180,10 @@ class OCIContainer:
         if detect_ci_provider() == CIProvider.travis_ci and platform.machine() == "ppc64le":
             network_args = ["--network=host"]
 
+        # we need '--pull=always' otherwise some images with the wrong platform get re-used (e.g. 386 image for amd64)
+        # c.f. https://github.com/moby/moby/issues/48197#issuecomment-2282802313
+        platform_args = [f"--platform={self.oci_platform.value}", "--pull=always"]
+
         simulate_32_bit = False
         if self.oci_platform == OCIPlatform.i386:
             # If the architecture running the image is already the right one
@@ -192,16 +193,15 @@ class OCIContainer:
             ctr_cmd = ["uname", "-m"]
             try:
                 container_machine = call(
-                    *run_cmd, *self.platform_args, self.image, *ctr_cmd, capture_stdout=True
+                    *run_cmd, *platform_args, self.image, *ctr_cmd, capture_stdout=True
                 ).strip()
             except subprocess.CalledProcessError:
                 # The image might have been built with amd64 architecture
                 # Let's try that
-                platform_args = ["--platform=linux/amd64", *self.platform_args[1:]]
+                platform_args = ["--platform=linux/amd64", *platform_args[1:]]
                 container_machine = call(
                     *run_cmd, *platform_args, self.image, *ctr_cmd, capture_stdout=True
                 ).strip()
-                self.platform_args = platform_args
             simulate_32_bit = container_machine != "i686"
 
         shell_args = ["linux32", "/bin/bash"] if simulate_32_bit else ["/bin/bash"]
@@ -216,7 +216,7 @@ class OCIContainer:
                 "--interactive",
                 *(["--volume=/:/host"] if not self.engine.disable_host_mount else []),
                 *network_args,
-                *self.platform_args,
+                *platform_args,
                 *self.engine.create_args,
                 self.image,
                 *shell_args,
