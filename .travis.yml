@@ -2,10 +2,6 @@ os: linux
 dist: focal
 language: python
 
-branches:
-  only:
-  - main
-
 jobs:
   include:
     - name: Linux | s390x | Python 3.9
