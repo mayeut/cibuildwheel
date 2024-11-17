@@ -266,3 +266,23 @@ def test_cp38_arm64_testing_universal2_installer(tmp_path, capfd, request):
     expected_wheels = [w.replace("10_9", "11_0") for w in ALL_MACOS_WHEELS if "cp38" in w]
 
     assert set(actual_wheels) == set(expected_wheels)
+
+
+@pytest.mark.skipif(
+    (utils.get_platform(), platform.machine()) != ("macos", "arm64"),
+    reason="this test is only relevant to macos arm64",
+)
+def test_rosetta_build_on_arm64(tmp_path):
+    project_dir = tmp_path / "project"
+    basic_project.generate(project_dir)
+    check_arch_cmd = """python -c 'import platform; assert platform.machine() == "x86_64"'"""
+    actual_wheels = utils.cibuildwheel_run(
+        project_dir,
+        add_env={
+            "CIBW_BEFORE_BUILD": check_arch_cmd,
+            "CIBW_ARCHS": "x86_64",
+            "CIBW_TEST_COMMAND": check_arch_cmd,
+        },
+    )
+    expected_wheels = utils.expected_wheels("spam", "0.1.0", machine_arch="x86_64")
+    assert set(actual_wheels) == set(expected_wheels)

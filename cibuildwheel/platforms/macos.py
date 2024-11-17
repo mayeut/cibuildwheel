@@ -131,6 +131,7 @@ def get_python_configurations(
 def install_cpython(_tmp: Path, version: str, url: str, free_threading: bool) -> Path:
     ft = "T" if free_threading else ""
     installation_path = Path(f"/Library/Frameworks/Python{ft}.framework/Versions/{version}")
+    executable = installation_path / "bin" / f"python{version}{ft.lower()}"
     with FileLock(CIBW_CACHE_PATH / f"cpython{version}.lock"):
         installed_system_packages = call("pkgutil", "--pkgs", capture_stdout=True).splitlines()
         # if this version of python isn't installed, get it from python.org and install
@@ -166,16 +167,10 @@ def install_cpython(_tmp: Path, version: str, url: str, free_threading: bool) ->
             env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
 
             if free_threading:
-                call(installation_path / f"bin/python{version}t", "-m", "ensurepip", env=env)
-                call(
-                    installation_path / f"bin/python{version}t",
-                    resources.INSTALL_CERTIFI_SCRIPT,
-                    env=env,
-                )
-            else:
-                call(installation_path / "bin/python3", resources.INSTALL_CERTIFI_SCRIPT, env=env)
+                call(executable, "-m", "ensurepip", env=env)
+            call(executable, resources.INSTALL_CERTIFI_SCRIPT, env=env)
 
-    return installation_path / "bin" / (f"python{version}t" if free_threading else "python3")
+    return executable
 
 
 def install_pypy(tmp: Path, url: str) -> Path:
@@ -227,7 +222,10 @@ def setup_python(
         base_python = install_cpython(
             tmp, python_configuration.version, python_configuration.url, free_threading
         )
-
+        if python_configuration.identifier.endswith("x86_64"):
+            arch_python = base_python.with_name(f"{base_python.name}-intel64")
+            if arch_python.exists() or Version(python_configuration.version) >= Version("3.9"):
+                base_python = arch_python
     elif implementation_id.startswith("pp"):
         base_python = install_pypy(tmp, python_configuration.url)
     elif implementation_id.startswith("gp"):
