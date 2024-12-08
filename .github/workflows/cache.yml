@@ -1,0 +1,38 @@
+name: Test cache
+
+on:
+  push:
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }} (${{ matrix.python_version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-13, macos-14, macos-15]
+        python_version: ['3.12']
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      name: Install Python ${{ matrix.python_version }}
+      with:
+        python-version: ${{ matrix.python_version }}
+        allow-prereleases: true
+    - run: pip install .
+    - name: run cpython setup
+      shell: python
+      run: |
+        from pathlib import Path
+        from cibuildwheel.macos import install_cpython
+
+        def main():
+          tmp = Path("/tmp/cibw-tmp")
+          install_cpython(tmp, "3.8", "https://www.python.org/ftp/python/3.8.10/python-3.8.10-macosx10.9.pkg", False)
+          install_cpython(tmp, "3.9", "https://www.python.org/ftp/python/3.9.13/python-3.9.13-macos11.pkg", False)
+          install_cpython(tmp, "3.10", "https://www.python.org/ftp/python/3.10.11/python-3.10.11-macos11.pkg", False)
+          install_cpython(tmp, "3.11", "https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg", False)
+          install_cpython(tmp, "3.12", "https://www.python.org/ftp/python/3.12.8/python-3.12.8-macos11.pkg", False)
+          install_cpython(tmp, "3.13", "https://www.python.org/ftp/python/3.13.1/python-3.13.1-macos11.pkg", False)
+          install_cpython(tmp, "3.13", "https://www.python.org/ftp/python/3.13.1/python-3.13.1-macos11.pkg", True)
+
+        if __name__ == "__main__":
+            main()
