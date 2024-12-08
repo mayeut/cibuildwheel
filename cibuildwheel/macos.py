@@ -170,7 +170,7 @@ def install_cpython(tmp: Path, version: str, url: str, free_threading: bool) -> 
                 # Python 3.13 is the first version to have a free-threading option
                 args += ["-applyChoiceChangesXML", str(free_thread_enable_313.resolve())]
             call("sudo", "installer", "-pkg", pkg_path, *args, "-target", "/")
-            pkg_path.unlink()
+            # pkg_path.unlink()
             env = os.environ.copy()
             env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
 
