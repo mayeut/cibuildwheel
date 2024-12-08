@@ -20,6 +20,12 @@ jobs:
         python-version: ${{ matrix.python_version }}
         allow-prereleases: true
     - run: pip install .
+    - uses: actions/cache@v4
+      name: cache installers
+      with:
+        path: /tmp/cibw-tmp
+        key: ${{ matrix.os }}-installers
+
     - name: run cpython setup
       shell: bash
       run: |
