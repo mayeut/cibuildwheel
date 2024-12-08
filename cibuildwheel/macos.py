@@ -161,9 +161,11 @@ def install_cpython(tmp: Path, version: str, url: str, free_threading: bool) -> 
                     """
                 )
                 raise errors.FatalError(msg)
-            pkg_path = tmp / "Python.pkg"
+            installer_filename = url.split("/")[-1]
+            pkg_path = tmp / installer_filename
             # download the pkg
-            download(url, pkg_path)
+            if not pkg_path.exists():
+                download(url, pkg_path)
             # install
             args = []
             if version.startswith("3.13"):
