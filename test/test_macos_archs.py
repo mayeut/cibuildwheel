@@ -281,9 +281,8 @@ def test_rosetta_build_on_arm64(tmp_path):
             "CIBW_BEFORE_BUILD": """python -c 'import platform; assert platform.machine() == "x86_64"'""",
             "CIBW_ARCHS": "x86_64",
         },
-        single_python=True,
     )
     expected_wheels = utils.expected_wheels(
-        "spam", "0.1.0", machine_arch="x86_64", single_python=True
+        "spam", "0.1.0", machine_arch="x86_64"
     )
     assert set(actual_wheels) == set(expected_wheels)
