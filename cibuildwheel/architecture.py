@@ -3,7 +3,6 @@ from __future__ import annotations
 import functools
 import platform as platform_module
 import re
-import shutil
 import subprocess
 import sys
 from collections.abc import Set
@@ -11,6 +10,7 @@ from enum import Enum
 from typing import Final, Literal, assert_never
 
 from .typing import PlatformName
+from .util.resources import LINUX_ARM7L_CHECK
 
 PRETTY_NAMES: Final[dict[PlatformName, str]] = {
     "linux": "Linux",
@@ -32,11 +32,8 @@ def _check_aarch32_el0() -> bool:
         return False
     if platform_module.machine() != "aarch64":
         return False
-    executable = shutil.which("linux32")
-    if executable is None:
-        return False
-    check = subprocess.run([executable, "uname", "-m"], check=False, capture_output=True, text=True)
-    return check.returncode == 0 and check.stdout.startswith("armv")
+    check = subprocess.run([LINUX_ARM7L_CHECK], check=False, capture_output=True, text=True)
+    return check.returncode == 0 and check.stdout.strip() == "armv7l"
 
 
 @functools.total_ordering

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import platform as platform_module
-import shutil
+import subprocess
 import sys
 
 import pytest
@@ -88,7 +88,9 @@ def test_arch_auto32(platform_machine):
 def test_arch_auto_no_aarch32(monkeypatch):
     monkeypatch.setattr(sys, "platform", "linux")
     monkeypatch.setattr(platform_module, "machine", lambda: "aarch64")
-    monkeypatch.setattr(shutil, "which", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        subprocess, "run", lambda args, **kwargs: subprocess.CompletedProcess(args, 1)
+    )
 
     arch_set = Architecture.parse_config("auto", "linux")
     assert arch_set == {Architecture.aarch64}
