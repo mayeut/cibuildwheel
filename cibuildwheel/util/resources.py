@@ -16,7 +16,7 @@ BUILD_PLATFORMS: Final[Path] = PATH / "build-platforms.toml"
 CONSTRAINTS: Final[Path] = PATH / "constraints.txt"
 VIRTUALENV: Final[Path] = PATH / "virtualenv.toml"
 CIBUILDWHEEL_SCHEMA: Final[Path] = PATH / "cibuildwheel.schema.json"
-LINUX_ARM7L_CHECK: Final[Path] = PATH / "linux_arm7l_check"
+LINUX_ARM7L_CHECK: Final[Path] = PATH / "linux_armv7l_check"
 
 
 def read_python_configs(config: PlatformName) -> list[dict[str, str]]:
