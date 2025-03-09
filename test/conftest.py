@@ -43,6 +43,7 @@ def docker_warmup(request: pytest.FixtureRequest) -> None:
     archs &= {"x86_64", "i686", "aarch64"}
     if not archs:
         return
+    return  # this doesn't work with multi-arch images
 
     options = Options(
         platform="linux",
