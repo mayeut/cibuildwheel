@@ -409,9 +409,7 @@ def test_create_args_volume(tmp_path: Path, container_engine: OCIContainerEngine
     )
 
     with OCIContainer(
-        engine=container_engine,
-        image=DEFAULT_IMAGE,
-        oci_platform=DEFAULT_OCI_PLATFORM,
+        engine=container_engine, image=DEFAULT_IMAGE, oci_platform=DEFAULT_OCI_PLATFORM
     ) as container:
         assert container.call(["cat", "/test_mount/test_file.txt"], capture_output=True) == "1234"
 
