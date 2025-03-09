@@ -491,9 +491,7 @@ def test_parse_engine_config(config, name, create_args, capsys):
 @pytest.mark.skipif(pm != "x86_64", reason="Only runs on x86_64")
 def test_enforce_32_bit(container_engine):
     with OCIContainer(
-        engine=container_engine,
-        image=DEFAULT_IMAGE_TEMPLATE.format(machine="i686"),
-        oci_platform=OCIPlatform.i386,
+        engine=container_engine, image=DEFAULT_IMAGE, oci_platform=OCIPlatform.i386
     ) as container:
         assert container.call(["uname", "-m"], capture_output=True).strip() == "i686"
         container_args = subprocess.run(
