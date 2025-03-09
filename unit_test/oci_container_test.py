@@ -26,16 +26,10 @@ from cibuildwheel.oci_container import (
 
 # Test utilities
 
+pm = platform.machine()
 # for these tests we use manylinux2014 images, because they're available on
 # multi architectures and include python3.8
-DEFAULT_IMAGE_TEMPLATE = "quay.io/pypa/manylinux2014_{machine}:2023-09-04-0828984"
-pm = platform.machine()
-if pm in {"x86_64", "ppc64le", "s390x"}:
-    DEFAULT_IMAGE = DEFAULT_IMAGE_TEMPLATE.format(machine=pm)
-elif pm in {"aarch64", "arm64"}:
-    DEFAULT_IMAGE = DEFAULT_IMAGE_TEMPLATE.format(machine="aarch64")
-else:
-    DEFAULT_IMAGE = ""
+DEFAULT_IMAGE = "quay.io/pypa/manylinux2014:2025.03.08-1"
 DEFAULT_OCI_PLATFORM = {
     "AMD64": OCIPlatform.AMD64,
     "x86_64": OCIPlatform.AMD64,
