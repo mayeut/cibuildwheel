@@ -86,7 +86,7 @@ images = [
     PyPAImageEOL("musllinux_1_1", "ppc64le", "2024.10.26-1"),
     PyPAImageEOL("musllinux_1_1", "s390x", "2024.10.26-1"),
     # musllinux_1_2 images
-    PyPAImage("musllinux_1_2", ["x86_64", "aarch64", "ppc64le", "s390x", "armv7l"], None),
+    PyPAImage("musllinux_1_2", ["x86_64", "i686", "aarch64", "ppc64le", "s390x", "armv7l"], None),
 ]
 
 config = configparser.ConfigParser()
