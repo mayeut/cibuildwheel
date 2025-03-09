@@ -24,7 +24,7 @@ environment = {FOO="BAR"}
 test-command = "pyproject"
 test-sources = ["test", "other dir"]
 
-manylinux-x86_64-image = "manylinux1"
+manylinux-x86_64-image = "manylinux_2_28"
 
 environment-pass = ["EXAMPLE_ENV"]
 
@@ -34,7 +34,7 @@ test-requires = "else"
 [[tool.cibuildwheel.overrides]]
 select = "cp313-*"
 test-command = "pyproject-override"
-manylinux-x86_64-image = "manylinux2014"
+manylinux-x86_64-image = "manylinux_2_34"
 """
 
 
@@ -74,13 +74,13 @@ def test_options_1(tmp_path, monkeypatch):
     assert local.manylinux_images is not None
     assert local.test_command == "pyproject"
     assert local.test_sources == ["test", "other dir"]
-    assert local.manylinux_images["x86_64"] == pinned_x86_64_container_image["manylinux1"]
+    assert local.manylinux_images["x86_64"] == pinned_x86_64_container_image["manylinux_2_28"]
 
     local = options.build_options("cp313-manylinux_x86_64")
     assert local.manylinux_images is not None
     assert local.test_command == "pyproject-override"
     assert local.test_sources == ["test", "other dir"]
-    assert local.manylinux_images["x86_64"] == pinned_x86_64_container_image["manylinux2014"]
+    assert local.manylinux_images["x86_64"] == pinned_x86_64_container_image["manylinux_2_34"]
 
 
 def test_passthrough(tmp_path, monkeypatch):
