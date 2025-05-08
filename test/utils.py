@@ -247,9 +247,12 @@ def _expected_wheels(
         ]
 
         if EnableGroup.CPythonFreeThreading in enable_groups:
-            python_abi_tags += [
-                "cp313-cp313t",
-            ]
+            python_abi_tags.append("cp313-cp313t")
+
+        if EnableGroup.CPythonPrerelease in enable_groups:
+            python_abi_tags.append("cp314-cp314")
+            if EnableGroup.CPythonFreeThreading in enable_groups:
+                python_abi_tags.append("cp314-cp314t")
 
         if EnableGroup.PyPy in enable_groups:
             python_abi_tags += [
