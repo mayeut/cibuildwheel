@@ -32,19 +32,25 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   lint:
     name: Linters (mypy, ruff, etc.)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-python@v6
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       id: python
       with:
         python-version: "3.x"
-    - uses: j178/prek-action@v1
+    - uses: j178/prek-action@91fd7d7cf70ae1dee9f4f44e7dfa5d1073fe6623 # v1.0.11
     - name: PyLint checks
-      run: pipx run --python "${{ steps.python.outputs.python-path }}" nox -s pylint -- --output-format=github
+      run: pipx run --python "${STEPS_PYTHON_OUTPUTS_PYTHON_PATH}" nox -s pylint -- --output-format=github
+      env:
+        STEPS_PYTHON_OUTPUTS_PYTHON_PATH: ${{ steps.python.outputs.python-path }}
 
   test:
     name: Test on ${{ matrix.os }} (${{ matrix.python_version }}) ${{ matrix.test_select }}
@@ -91,14 +97,16 @@ jobs:
           test_select: android
     timeout-minutes: 180
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-python@v6
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       name: Install Python ${{ matrix.python_version }}
       with:
         python-version: ${{ matrix.python_version }}
         allow-prereleases: true
 
-    - uses: astral-sh/setup-uv@v7
+    - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
 
     - name: Free up disk space
       if: runner.os == 'Linux' && matrix.test_select != 'android'
@@ -111,7 +119,7 @@ jobs:
     # for oci_container unit tests
     - name: Set up QEMU
       if: runner.os == 'Linux'
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
     - name: Set up Xcode
       if: ${{ startsWith(matrix.os, 'macos-15') }}
@@ -123,12 +131,12 @@ jobs:
       run: |
         uv sync --no-dev --group test
 
-    - uses: joerick/pr-labels-action@v1.0.9
+    - uses: joerick/pr-labels-action@0543b277721e852d821c6738d449f2f4dea03d5f # v1.0.9
 
     - name: Set CIBW_ENABLE
       shell: bash
       run: |
-        if [[ "${{ github.ref_name }}" == "main" ]]; then
+        if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
           CIBW_ENABLE=all
         else
           # get the default CIBW_ENABLE value from the test module
@@ -201,7 +209,7 @@ jobs:
       run: |
         test $(find wheelhouse_only -name '*.whl' | wc -l) -eq 1
 
-    - uses: actions/upload-artifact@v6
+    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
         path: wheelhouse/*.whl
@@ -219,11 +227,13 @@ jobs:
     outputs:
       archs: ${{ steps.archs.outputs.archs }}
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-python@v6
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: "3.x"
-    - uses: astral-sh/setup-uv@v7
+    - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
     - name: Install dependencies
       run: uv sync --no-dev --group test
     - name: Get qemu emulated architectures
@@ -242,19 +252,23 @@ jobs:
       matrix:
         arch: ${{ fromJSON(needs.emulated-archs.outputs.archs) }}
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-python@v6
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       with:
         python-version: "3.x"
-    - uses: astral-sh/setup-uv@v7
+    - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
     - name: Install dependencies
       run: uv sync --no-dev --group test
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
 
     - name: Run the emulation tests
-      run: uv run --no-sync pytest --run-emulation ${{ matrix.arch }} test/test_emulation.py
+      run: uv run --no-sync pytest --run-emulation "${MATRIX_ARCH}" test/test_emulation.py
+      env:
+        MATRIX_ARCH: ${{ matrix.arch }}
 
   test-pyodide:
     name: Test pyodide
@@ -262,12 +276,14 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
-    - uses: actions/checkout@v6
-    - uses: actions/setup-python@v6
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       name: Install Python 3.12
       with:
         python-version: '3.12'
-    - uses: astral-sh/setup-uv@v7
+    - uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
 
     - name: Install dependencies
       run: uv sync --no-dev --group test

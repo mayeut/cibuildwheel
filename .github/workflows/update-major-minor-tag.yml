@@ -12,6 +12,8 @@ on:
 env:
   TAG_NAME: ${{ github.event.inputs.TAG_NAME || github.event.release.tag_name }}
 
+permissions: {}
+
 jobs:
   update_tag:
     name: Update the major.minor tag to include the ${{ github.event.inputs.TAG_NAME || github.event.release.tag_name }} changes
@@ -21,10 +23,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
 
       - name: Update the ${{ env.TAG_NAME }} tag
         id: update-major-minor-tag
-        uses: joerick/update-vX.Y-tag-action@v1.0
+        uses: joerick/update-vX.Y-tag-action@c4cefb60c33b82e4aa73a469e4acf30ee48d5812 # v1.0.2
         with:
           source-tag: ${{ env.TAG_NAME }}

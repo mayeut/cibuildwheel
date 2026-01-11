@@ -28,7 +28,7 @@ branding:
 runs:
   using: composite
   steps:
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
       id: python
       with:
         python-version: "3.11 - 3.13"
@@ -37,7 +37,7 @@ runs:
     - id: cibw
       run: |
         # Install cibuildwheel
-        "${{ steps.python.outputs.python-path }}" -u << "EOF"
+        "${STEPS_PYTHON_OUTPUTS_PYTHON_PATH}" -u << "EOF"
         import os
         import shutil
         import sys
@@ -46,7 +46,7 @@ runs:
         from pathlib import Path
         from subprocess import run
 
-        EXTRAS = set(e.strip() for e in "${{ inputs.extras }}".split(",") if e.strip())
+        EXTRAS = set(e.strip() for e in os.environ["INPUTS_EXTRAS"].split(",") if e.strip())
         if sys.platform == "linux":
             EXTRAS.discard("uv")
 
@@ -92,28 +92,33 @@ runs:
         print("::endgroup::")
         EOF
       shell: bash
+      env:
+        STEPS_PYTHON_OUTPUTS_PYTHON_PATH: ${{ steps.python.outputs.python-path }}
+        INPUTS_EXTRAS: ${{ inputs.extras }}
 
     # Redirecting stderr to stdout to fix interleaving issue in Actions.
-    - run: >
+    - run: > # zizmor: ignore[template-injection]
         cibuildwheel
-        "${{ inputs.package-dir }}"
+        "${INPUTS_PACKAGE_DIR}"
         ${{ inputs.output-dir != ''  && format('--output-dir "{0}"', inputs.output-dir) || ''}}
         ${{ inputs.config-file != '' && format('--config-file "{0}"', inputs.config-file) || ''}}
         ${{ inputs.only != ''        && format('--only "{0}"', inputs.only) || ''}}
         2>&1
       env:
         PATH: "${{ steps.cibw.outputs.updated-path }}"
+        INPUTS_PACKAGE_DIR: ${{ inputs.package-dir }}
       shell: bash
       if: runner.os != 'Windows'
 
     # Windows needs powershell to interact nicely with Meson
-    - run: >
+    - run: > # zizmor: ignore[template-injection]
         cibuildwheel
-        "${{ inputs.package-dir }}"
+        "$env:INPUTS_PACKAGE_DIR"
         ${{ inputs.output-dir != ''  && format('--output-dir "{0}"', inputs.output-dir) || ''}}
         ${{ inputs.config-file != '' && format('--config-file "{0}"', inputs.config-file) || ''}}
         ${{ inputs.only != ''        && format('--only "{0}"', inputs.only) || ''}}
       env:
         PATH: "${{ steps.cibw.outputs.updated-path }}"
+        INPUTS_PACKAGE_DIR: ${{ inputs.package-dir }}
       shell: pwsh
       if: runner.os == 'Windows'
