@@ -1,4 +1,3 @@
-import os
 import sys
 import tomllib
 from fnmatch import fnmatch
