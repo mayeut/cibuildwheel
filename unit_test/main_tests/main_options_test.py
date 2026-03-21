@@ -556,6 +556,7 @@ def test_enable(method, intercepted_build_args, monkeypatch):
 
 def test_enable_all(intercepted_build_args, monkeypatch):
     monkeypatch.setattr(sys, "argv", [*sys.argv, "--enable", "all"])
+    monkeypatch.delenv("CIBW_ENABLE", raising=False)
 
     main()
 
