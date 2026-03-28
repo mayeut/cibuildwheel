@@ -292,8 +292,11 @@ def _expected_wheels(
 
         enable_groups = get_enable_groups()
 
-        if EnableGroup.CPythonPrerelease in enable_groups:
-            ...  # Add cp315 here when available
+        if EnableGroup.CPythonPrerelease in enable_groups and platform != "linux":
+            python_abi_tags += [
+                "cp315-cp315",
+                "cp315-cp315t",
+            ]
 
         if EnableGroup.PyPyEoL in enable_groups:
             python_abi_tags += [

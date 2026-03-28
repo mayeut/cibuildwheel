@@ -30,6 +30,7 @@ While cibuildwheel itself requires a recent Python version to run (we support th
 | CPython 3.12       | ✅ | ✅  | ✅  | ✅  | ✅² | ✅ | ✅  | ✅ | ✅  | ✅  | ✅⁴ | N/A | N/A | ✅³ |
 | CPython 3.13       | ✅ | ✅  | ✅  | ✅  | ✅² | ✅ | ✅  | ✅ | ✅  | ✅  | ✅⁴ | ✅  | ✅  | ✅³ |
 | CPython 3.14       | ✅ | ✅  | ✅  | ✅  | ✅² | ✅ | ✅  | ✅ | ✅  | ✅  | ✅⁴ | ✅  | ✅  | N/A |
+| CPython 3.15⁵       | ✅ | ✅  | ✅  | ✅  | ✅² | ✅ | ✅  | ✅ | ✅  | ✅  | ✅⁴ | ✅  | ✅  | N/A |
 | PyPy 3.9 v7.3      | ✅ | ✅  | ✅  | N/A | N/A | ✅¹ | ✅¹  | ✅¹ | N/A | N/A | N/A | N/A | N/A | N/A |
 | PyPy 3.10 v7.3     | ✅ | ✅  | ✅  | N/A | N/A | ✅¹ | ✅¹  | ✅¹ | N/A | N/A | N/A | N/A | N/A | N/A |
 | PyPy 3.11 v7.3     | ✅ | ✅  | ✅  | N/A | N/A | ✅¹ | ✅¹  | ✅¹ | N/A | N/A | N/A | N/A | N/A | N/A |
@@ -40,6 +41,7 @@ While cibuildwheel itself requires a recent Python version to run (we support th
 <sup>² Windows arm64 support is experimental.</sup><br>
 <sup>³ Experimental, not yet supported on PyPI, but can be used directly in web deployment. Use `--platform pyodide` to build.</sup><br>
 <sup>⁴ manylinux armv7l support is experimental. As there are no RHEL based image for this architecture, it's using an Ubuntu based image instead.</sup><br>
+<sup>⁵ Python 3.15 requires opt-in using [`enable`](https://cibuildwheel.pypa.io/en/stable/options/#enable).</sup><br>
 
 - Builds manylinux, musllinux, macOS, and Windows wheels for CPython, PyPy, and GraalPy
 - Works on GitHub Actions, Azure Pipelines, CircleCI, GitLab CI, and Cirrus CI
