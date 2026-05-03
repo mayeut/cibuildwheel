@@ -461,7 +461,7 @@ def test_build_selector_deprecated_error(
 
     stderr = capsys.readouterr().err
     if pattern == "cp313t*":
-        msg = "cibuildwheel 3.x no longer supports Python 3.13 free-threading. Please use the an older 3.x version or update"
+        msg = "cibuildwheel 4.x no longer supports Python 3.13 free-threading. Please use the 3.x series or update"
     else:
         series = "2" if "6" in pattern else "1"
         msg = f"cibuildwheel 3.x no longer supports Python < 3.8. Please use the {series}.x series or update"
