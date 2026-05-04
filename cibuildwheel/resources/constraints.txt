@@ -18,7 +18,7 @@ packaging==26.2
     # via
     #   build
     #   delocate
-pip==26.1
+pip==26.0.1
     # via -r cibuildwheel/resources/constraints.in
 platformdirs==4.9.6
     # via
@@ -30,5 +30,5 @@ python-discovery==1.2.2
     # via virtualenv
 typing-extensions==4.15.0
     # via delocate
-virtualenv==21.3.0
+virtualenv==21.2.1
     # via -r cibuildwheel/resources/constraints.in

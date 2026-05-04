@@ -36,7 +36,7 @@ typing-extensions==4.15.0
     # via
     #   delocate
     #   virtualenv
-virtualenv==21.3.0
+virtualenv==21.2.1
     # via -r cibuildwheel/resources/constraints.in
 zipp==3.23.1
     # via importlib-metadata
