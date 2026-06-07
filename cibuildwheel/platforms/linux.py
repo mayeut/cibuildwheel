@@ -8,16 +8,16 @@ import sys
 import textwrap
 from collections import OrderedDict
 from pathlib import Path, PurePath, PurePosixPath
-from typing import assert_never
+from typing import Final, assert_never
 
 from cibuildwheel import errors
 from cibuildwheel.architecture import Architecture
 from cibuildwheel.audit import needs_audit, run_audit
 from cibuildwheel.frontend import get_build_frontend_extra_flags, prepare_config_settings
 from cibuildwheel.logger import log
-from cibuildwheel.oci_container import OCIContainer, OCIContainerEngineConfig, OCIPlatform
+from cibuildwheel.oci_container import AbstractContainer, OCIContainerEngineConfig, OCIPlatform
 from cibuildwheel.util import resources
-from cibuildwheel.util.file import copy_test_sources
+from cibuildwheel.util.file import copy_into_local, copy_test_sources
 from cibuildwheel.util.helpers import prepare_command, unwrap
 from cibuildwheel.util.packaging import find_compatible_wheel
 
@@ -55,7 +55,7 @@ class PythonConfiguration:
 class BuildStep:
     platform_configs: list[PythonConfiguration]
     platform_tag: str
-    container_engine: OCIContainerEngineConfig
+    container_engine: OCIContainerEngineConfig | None
     container_image: str
 
 
@@ -107,7 +107,7 @@ def get_build_steps(
     Groups PythonConfigurations into BuildSteps. Each BuildStep represents a
     separate container instance.
     """
-    steps = OrderedDict[tuple[str, str, str, OCIContainerEngineConfig], BuildStep]()
+    steps = OrderedDict[tuple[str, str, str, OCIContainerEngineConfig | None], BuildStep]()
 
     for config in python_configurations:
         _, platform_tag = config.identifier.split("-", 1)
@@ -134,7 +134,7 @@ def get_build_steps(
 
 
 def check_all_python_exist(
-    *, platform_configs: Iterable[PythonConfiguration], container: OCIContainer
+    *, platform_configs: Iterable[PythonConfiguration], container: AbstractContainer
 ) -> None:
     exist = True
     has_manylinux_interpreters = False
@@ -173,17 +173,19 @@ def build_in_container(
     *,
     options: Options,
     platform_configs: Sequence[PythonConfiguration],
-    container: OCIContainer,
+    container: AbstractContainer,
     container_project_path: PurePath,
     container_package_dir: PurePath,
     local_tmp_dir: Path,
 ) -> None:
-    container_output_dir = PurePosixPath("/output")
-
     check_all_python_exist(platform_configs=platform_configs, container=container)
 
-    log.step("Copying project into container...")
-    container.copy_into(Path.cwd(), container_project_path)
+    if container.image == "native":
+        container_output_dir = PurePosixPath(options.globals.output_dir)
+    else:
+        container_output_dir = PurePosixPath("/output")
+        log.step("Copying project into container...")
+        container.copy_into(Path.cwd(), container_project_path)
 
     before_all_options_identifier = platform_configs[0].identifier
     before_all_options = options.build_options(before_all_options_identifier)
@@ -224,8 +226,11 @@ def build_in_container(
             tmp_dir=local_identifier_tmp_dir,
         )
         if local_constraints_file:
-            container_constraints_file = PurePosixPath("/constraints.txt")
-            container.copy_into(local_constraints_file, container_constraints_file)
+            if container.image == "native":
+                container_constraints_file = PurePosixPath(local_constraints_file)
+            else:
+                container_constraints_file = PurePosixPath("/constraints.txt")
+                container.copy_into(local_constraints_file, container_constraints_file)
             dependency_constraint_flags = ["-c", container_constraints_file]
 
         env = container.get_environment()
@@ -285,7 +290,10 @@ def build_in_container(
 
             log.step("Building wheel...")
 
-            temp_dir = PurePosixPath("/tmp/cibuildwheel")
+            if container.image == "native":
+                temp_dir = PurePosixPath(local_identifier_tmp_dir)
+            else:
+                temp_dir = PurePosixPath("/tmp/cibuildwheel")
             built_wheel_dir = temp_dir / "built_wheel"
             container.call(["rm", "-rf", built_wheel_dir])
             container.call(["mkdir", "-p", built_wheel_dir])
@@ -385,8 +393,11 @@ def build_in_container(
                 local_abi3audit_dir = local_identifier_tmp_dir / "audit"
                 local_abi3audit_dir.mkdir(parents=True, exist_ok=True)
                 try:
-                    container.copy_out(repaired_wheel_dir, local_abi3audit_dir)
-                    local_wheel = local_abi3audit_dir / repaired_wheel.name
+                    if container.image == "native":
+                        local_wheel = Path(repaired_wheel)
+                    else:
+                        container.copy_out(repaired_wheel_dir, local_abi3audit_dir)
+                        local_wheel = local_abi3audit_dir / repaired_wheel.name
                     run_audit(tmp_dir=local_tmp_dir, build_options=build_options, wheel=local_wheel)
                 finally:
                     shutil.rmtree(local_abi3audit_dir, ignore_errors=True)
@@ -401,9 +412,7 @@ def build_in_container(
                     ["pip", "install", "virtualenv", *dependency_constraint_flags], env=env
                 )
 
-            testing_temp_dir = PurePosixPath(
-                container.call(["mktemp", "-d"], capture_output=True).strip()
-            )
+            testing_temp_dir = temp_dir / "testing"
             venv_dir = testing_temp_dir / "venv"
 
             if use_uv:
@@ -451,17 +460,18 @@ def build_in_container(
             test_cwd = testing_temp_dir / "test_cwd"
             container.call(["mkdir", "-p", test_cwd])
 
+            copy_into = copy_into_local if container.image == "native" else container.copy_into
             if build_options.test_sources:
                 copy_test_sources(
                     build_options.test_sources,
                     Path.cwd(),
                     test_cwd,
-                    copy_into=container.copy_into,
+                    copy_into=copy_into,
                 )
             else:
                 # Use the test_fail.py file to raise a nice error if the user
                 # tries to run tests in the cwd
-                container.copy_into(resources.TEST_FAIL_CWD_FILE, test_cwd / "test_fail.py")
+                copy_into(resources.TEST_FAIL_CWD_FILE, test_cwd / "test_fail.py")
 
             container.call(["sh", "-c", test_command_prepared], cwd=test_cwd, env=virtualenv_env)
 
@@ -478,10 +488,11 @@ def build_in_container(
 
         log.build_end(output_wheel)
 
-    log.step("Copying wheels back to host...")
-    # copy the output back into the host
-    container.copy_out(container_output_dir, options.globals.output_dir)
-    log.step_end()
+    if container.image != "native":
+        log.step("Copying wheels back to host...")
+        # copy the output back into the host
+        container.copy_out(container_output_dir, options.globals.output_dir)
+        log.step_end()
 
 
 def build(options: Options, tmp_path: Path) -> None:
@@ -489,34 +500,37 @@ def build(options: Options, tmp_path: Path) -> None:
         options.globals.build_selector, options.globals.architectures
     )
 
-    cwd = Path.cwd()
-    abs_package_dir = options.globals.package_dir.resolve()
+    cwd: Final = Path.cwd()
+    abs_package_dir: Final = options.globals.package_dir.resolve()
     if cwd != abs_package_dir and cwd not in abs_package_dir.parents:
         msg = "package_dir must be inside the working directory"
         raise errors.ConfigurationError(msg)
 
-    container_project_path = PurePosixPath("/project")
-    container_package_dir = container_project_path / abs_package_dir.relative_to(cwd)
-
     for build_step in get_build_steps(options, python_configurations):
-        try:
-            # check the container engine is installed
-            subprocess.run(
-                [build_step.container_engine.name, "--version"],
-                check=True,
-                stdout=subprocess.DEVNULL,
-            )
-        except subprocess.CalledProcessError as error:
-            msg = unwrap(
-                f"""
-                {build_step.container_engine.name} not found. An OCI exe like
-                Docker or Podman is required to run Linux builds. If you're
-                building on Travis CI, add `services: [docker]` to your
-                .travis.yml. If you're building on Circle CI in Linux, add a
-                `setup_remote_docker` step to your .circleci/config.yml.
-                """
-            )
-            raise errors.ConfigurationError(msg) from error
+        if build_step.container_engine is None:
+            container_project_path = PurePosixPath(cwd)
+            container_package_dir = container_project_path / abs_package_dir.relative_to(cwd)
+        else:
+            container_project_path = PurePosixPath("/project")
+            container_package_dir = container_project_path / abs_package_dir.relative_to(cwd)
+            try:
+                # check the container engine is installed
+                subprocess.run(
+                    [build_step.container_engine.name, "--version"],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                )
+            except subprocess.CalledProcessError as error:
+                msg = unwrap(
+                    f"""
+                    {build_step.container_engine.name} not found. An OCI exe like
+                    Docker or Podman is required to run Linux builds. If you're
+                    building on Travis CI, add `services: [docker]` to your
+                    .travis.yml. If you're building on Circle CI in Linux, add a
+                    `setup_remote_docker` step to your .circleci/config.yml.
+                    """
+                )
+                raise errors.ConfigurationError(msg) from error
 
         try:
             ids_to_build = [x.identifier for x in build_step.platform_configs]
@@ -525,7 +539,7 @@ def build(options: Options, tmp_path: Path) -> None:
             print(f"info: This container will host the build for {', '.join(ids_to_build)}...")
             architecture = Architecture(build_step.platform_tag.split("_", 1)[1])
 
-            with OCIContainer(
+            with AbstractContainer.create(
                 image=build_step.container_image,
                 oci_platform=ARCHITECTURE_OCI_PLATFORM_MAP[architecture],
                 cwd=container_project_path,
@@ -554,16 +568,30 @@ def _matches_prepared_command(error_cmd: Sequence[str], command_template: str) -
 
 
 def troubleshoot(options: Options, error: Exception) -> None:
-    if isinstance(error, subprocess.CalledProcessError) and (
-        error.cmd[0:4] == ["python", "-m", "pip", "wheel"]
-        or error.cmd[0:2] == ["uv", "build"]
-        or error.cmd[0:3] == ["python", "-m", "build"]
+    if not isinstance(error, subprocess.CalledProcessError):
+        return
+    cmd = list(error.cmd)
+    if cmd[0].endswith("/python"):
+        cmd[0] = "python"
+    elif cmd[0].endswith("/uv"):
+        cmd[0] = "uv"
+    elif cmd[0].endswith("/sh"):
+        cmd[0] = "sh"
+    if (
+        cmd[0:4] == ["python", "-m", "pip", "wheel"]
+        or cmd[0:2] == ["uv", "build"]
+        or cmd[0:3] == ["python", "-m", "build"]
         or _matches_prepared_command(
-            error.cmd, options.build_options(None).repair_command
+            cmd, options.build_options(None).repair_command
         )  # TODO allow matching of overrides too?
     ):
         # the wheel build step or the repair step failed
-        so_files = list(options.globals.package_dir.glob("**/*.so"))
+        setuptools_build_path = options.globals.package_dir / "build"
+        so_files = [
+            path
+            for path in options.globals.package_dir.glob("**/*.so")
+            if setuptools_build_path not in path.parents  # remove setuptools extensions
+        ]
 
         if so_files:
             print(

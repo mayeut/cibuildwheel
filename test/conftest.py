@@ -129,7 +129,11 @@ def docker_warmup_fixture(
     request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory, worker_id: str
 ) -> None:
     # if we're in CI testing linux, let's warm-up docker images
-    if detect_ci_provider() is None or get_platform() != "linux":
+    if (
+        detect_ci_provider() is None
+        or get_platform() != "linux"
+        or os.environ.get("CIBW_CONTAINER_ENGINE", "docker") == "none"
+    ):
         return None
     if request.config.getoption("--run-emulation", default=None) is not None:
         # emulation tests only run one test in CI, caching the image only slows down the test
@@ -202,7 +206,11 @@ def build_frontend_env(request: pytest.FixtureRequest) -> Generator[dict[str, st
 @pytest.fixture
 def docker_cleanup() -> Generator[None, None, None]:
     def get_images() -> set[str]:
-        if detect_ci_provider() is None or get_platform() != "linux":
+        if (
+            detect_ci_provider() is None
+            or get_platform() != "linux"
+            or os.environ.get("CIBW_CONTAINER_ENGINE", "docker") == "none"
+        ):
             return set()
         images = subprocess.run(
             ["docker", "image", "ls", "--format", "{{json .ID}}"],

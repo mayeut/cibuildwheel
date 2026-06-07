@@ -14,8 +14,8 @@ import textwrap
 import typing
 import uuid
 from enum import Enum
-from pathlib import PurePosixPath
-from typing import Literal, assert_never
+from pathlib import Path, PurePosixPath
+from typing import Literal, Protocol, assert_never
 
 from cibuildwheel.ci import CIProvider, detect_ci_provider
 from cibuildwheel.errors import OCIEngineTooOldError
@@ -26,7 +26,7 @@ from cibuildwheel.util.helpers import FlexibleVersion, parse_key_value_string, s
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
-    from pathlib import Path, PurePath
+    from pathlib import PurePath
     from types import TracebackType
     from typing import IO, Self
 
@@ -76,13 +76,15 @@ class OCIContainerEngineConfig:
     disable_host_mount: bool = False
 
     @classmethod
-    def from_config_string(cls, config_string: str) -> Self:
+    def from_config_string(cls, config_string: str) -> Self | None:
         config_dict = parse_key_value_string(
             config_string,
             ["name"],
             ["create_args", "create-args", "disable_host_mount", "disable-host-mount"],
         )
         name = " ".join(config_dict["name"])
+        if name == "none":
+            return None
         if name not in {"docker", "podman"}:
             msg = f"unknown container engine {name}"
             raise ValueError(msg)
@@ -174,7 +176,100 @@ def _check_engine_version(engine: OCIContainerEngineConfig) -> None:
         raise OCIEngineTooOldError(msg) from e
 
 
-class OCIContainer:
+class AbstractContainer(Protocol):
+    image: str
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        image: str,
+        oci_platform: OCIPlatform,
+        cwd: PathOrStr | None = None,
+        engine: OCIContainerEngineConfig | None = DEFAULT_ENGINE,
+    ) -> AbstractContainer:
+        if engine is None:
+            return Host(oci_platform=oci_platform, cwd=cwd)
+        else:
+            return OCIContainer(image=image, oci_platform=oci_platform, cwd=cwd, engine=engine)
+
+    def __enter__(self) -> Self: ...
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None: ...
+
+    def copy_into(self, from_path: Path, to_path: PurePath) -> None: ...
+
+    def copy_out(self, from_path: PurePath, to_path: Path) -> None: ...
+
+    def get_environment(self) -> dict[str, str]: ...
+
+    def glob(self, path: PurePosixPath, pattern: str) -> list[PurePosixPath]: ...
+
+    def call(
+        self,
+        args: Sequence[PathOrStr],
+        env: Mapping[str, str] | None = None,
+        capture_output: Literal[True, False] = False,
+        cwd: PathOrStr | None = None,
+    ) -> str: ...
+
+    def environment_executor(self, command: Sequence[str], environment: dict[str, str]) -> str: ...
+
+
+class Host(AbstractContainer):
+    def __init__(
+        self,
+        *,
+        oci_platform: OCIPlatform,
+        cwd: PathOrStr | None = None,
+    ):
+        self.image = "native"
+        assert oci_platform == OCIPlatform.native()
+        if cwd is not None:
+            assert Path().samefile(cwd)
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        return None
+
+    def copy_into(self, from_path: Path, to_path: PurePath) -> None:
+        raise NotImplementedError()
+
+    def copy_out(self, from_path: PurePath, to_path: Path) -> None:
+        raise NotImplementedError()
+
+    def get_environment(self) -> dict[str, str]:
+        return os.environ.copy()
+
+    def glob(self, path: PurePosixPath, pattern: str) -> list[PurePosixPath]:
+        return [PurePosixPath(path_.as_posix()) for path_ in Path(path).glob(pattern)]
+
+    def call(
+        self,
+        args: Sequence[PathOrStr],
+        env: Mapping[str, str] | None = None,
+        capture_output: Literal[True, False] = False,
+        cwd: PathOrStr | None = None,
+    ) -> str:
+        return call(*args, env=env, cwd=cwd, capture_stdout=capture_output) or ""
+
+    def environment_executor(self, command: Sequence[str], environment: dict[str, str]) -> str:
+        return self.call(command, env=environment, capture_output=True)
+
+
+class OCIContainer(AbstractContainer):
     """
     An object that represents a running OCI (e.g. Docker) container.
 
@@ -190,6 +285,8 @@ class OCIContainer:
         >>> from cibuildwheel.oci_container import *  # NOQA
         >>> from cibuildwheel.options import _get_pinned_container_images
         >>> import pytest
+        >>> if os.environ.get("CIBW_CONTAINER_ENGINE", "docker") == "none":
+        ...     pytest.skip('needs a container engine')
         >>> try:
         ...     oci_platform = OCIPlatform.native()
         ... except OSError as ex:
@@ -482,7 +579,7 @@ class OCIContainer:
         self,
         args: Sequence[PathOrStr],
         env: Mapping[str, str] | None = None,
-        capture_output: bool = False,
+        capture_output: Literal[True, False] = False,
         cwd: PathOrStr | None = None,
     ) -> str:
         if cwd is None:
