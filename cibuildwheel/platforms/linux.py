@@ -7,15 +7,21 @@ import subprocess
 import sys
 import textwrap
 from collections import OrderedDict
-from pathlib import Path, PurePath, PurePosixPath
-from typing import Final, assert_never
+from pathlib import Path, PurePosixPath
+from typing import Final, assert_never, cast
 
 from cibuildwheel import errors
 from cibuildwheel.architecture import Architecture
 from cibuildwheel.audit import needs_audit, run_audit
 from cibuildwheel.frontend import get_build_frontend_extra_flags, prepare_config_settings
 from cibuildwheel.logger import log
-from cibuildwheel.oci_container import AbstractContainer, OCIContainerEngineConfig, OCIPlatform
+from cibuildwheel.oci_container import (
+    AbstractContainer,
+    BuilderPath,
+    OCIContainerEngineConfig,
+    OCIPlatform,
+    RemotePath,
+)
 from cibuildwheel.util import resources
 from cibuildwheel.util.file import copy_into_local, copy_test_sources
 from cibuildwheel.util.helpers import prepare_command, unwrap
@@ -23,7 +29,7 @@ from cibuildwheel.util.packaging import find_compatible_wheel
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence, Set
+    from collections.abc import Callable, Iterable, Iterator, Sequence, Set
 
     from cibuildwheel.options import BuildOptions, Options
     from cibuildwheel.selector import BuildSelector
@@ -174,16 +180,16 @@ def build_in_container(
     options: Options,
     platform_configs: Sequence[PythonConfiguration],
     container: AbstractContainer,
-    container_project_path: PurePath,
-    container_package_dir: PurePath,
+    container_project_path: BuilderPath,
+    container_package_dir: BuilderPath,
     local_tmp_dir: Path,
 ) -> None:
     check_all_python_exist(platform_configs=platform_configs, container=container)
 
-    if container.image == "native":
-        container_output_dir = PurePosixPath(options.globals.output_dir)
+    if not isinstance(container_project_path, RemotePath):
+        container_output_dir: BuilderPath = options.globals.output_dir
     else:
-        container_output_dir = PurePosixPath("/output")
+        container_output_dir = RemotePath("/output")
         log.step("Copying project into container...")
         container.copy_into(Path.cwd(), container_project_path)
 
@@ -208,7 +214,7 @@ def build_in_container(
         )
         container.call(["sh", "-c", before_all_prepared], env=env)
 
-    built_wheels: list[PurePosixPath] = []
+    built_wheels: list[BuilderPath] = []
 
     for config in platform_configs:
         log.build_start(config.identifier)
@@ -226,12 +232,12 @@ def build_in_container(
             tmp_dir=local_identifier_tmp_dir,
         )
         if local_constraints_file:
-            if container.image == "native":
-                container_constraints_file = PurePosixPath(local_constraints_file)
-            else:
-                container_constraints_file = PurePosixPath("/constraints.txt")
+            if isinstance(container_output_dir, RemotePath):
+                container_constraints_file = RemotePath("/constraints.txt")
                 container.copy_into(local_constraints_file, container_constraints_file)
-            dependency_constraint_flags = ["-c", container_constraints_file]
+                dependency_constraint_flags = ["-c", container_constraints_file]
+            else:
+                dependency_constraint_flags = ["-c", local_constraints_file]
 
         env = container.get_environment()
         env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
@@ -290,10 +296,11 @@ def build_in_container(
 
             log.step("Building wheel...")
 
-            if container.image == "native":
-                temp_dir = PurePosixPath(local_identifier_tmp_dir)
+            if isinstance(container_output_dir, RemotePath):
+                temp_dir: BuilderPath = RemotePath("/tmp/cibuildwheel")
             else:
-                temp_dir = PurePosixPath("/tmp/cibuildwheel")
+                temp_dir = local_identifier_tmp_dir
+
             built_wheel_dir = temp_dir / "built_wheel"
             container.call(["rm", "-rf", built_wheel_dir])
             container.call(["mkdir", "-p", built_wheel_dir])
@@ -393,11 +400,11 @@ def build_in_container(
                 local_abi3audit_dir = local_identifier_tmp_dir / "audit"
                 local_abi3audit_dir.mkdir(parents=True, exist_ok=True)
                 try:
-                    if container.image == "native":
-                        local_wheel = Path(repaired_wheel)
-                    else:
-                        container.copy_out(repaired_wheel_dir, local_abi3audit_dir)
+                    if isinstance(repaired_wheel, RemotePath):
+                        container.copy_out(repaired_wheel.parent, local_abi3audit_dir)
                         local_wheel = local_abi3audit_dir / repaired_wheel.name
+                    else:
+                        local_wheel = repaired_wheel
                     run_audit(tmp_dir=local_tmp_dir, build_options=build_options, wheel=local_wheel)
                 finally:
                     shutil.rmtree(local_abi3audit_dir, ignore_errors=True)
@@ -460,7 +467,10 @@ def build_in_container(
             test_cwd = testing_temp_dir / "test_cwd"
             container.call(["mkdir", "-p", test_cwd])
 
-            copy_into = copy_into_local if container.image == "native" else container.copy_into
+            copy_into = cast(
+                "Callable[[Path, BuilderPath], None]",
+                container.copy_into if isinstance(test_cwd, RemotePath) else copy_into_local,
+            )
             if build_options.test_sources:
                 copy_test_sources(
                     build_options.test_sources,
@@ -488,7 +498,7 @@ def build_in_container(
 
         log.build_end(output_wheel)
 
-    if container.image != "native":
+    if isinstance(container_output_dir, RemotePath):
         log.step("Copying wheels back to host...")
         # copy the output back into the host
         container.copy_out(container_output_dir, options.globals.output_dir)
@@ -508,10 +518,10 @@ def build(options: Options, tmp_path: Path) -> None:
 
     for build_step in get_build_steps(options, python_configurations):
         if build_step.container_engine is None:
-            container_project_path = PurePosixPath(cwd)
+            container_project_path: BuilderPath = Path(cwd)
             container_package_dir = container_project_path / abs_package_dir.relative_to(cwd)
         else:
-            container_project_path = PurePosixPath("/project")
+            container_project_path = RemotePath("/project")
             container_package_dir = container_project_path / abs_package_dir.relative_to(cwd)
             try:
                 # check the container engine is installed

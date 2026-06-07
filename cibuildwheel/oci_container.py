@@ -15,7 +15,7 @@ import typing
 import uuid
 from enum import Enum
 from pathlib import Path, PurePosixPath
-from typing import Literal, Protocol, assert_never
+from typing import Literal, Protocol, TypeVar, assert_never, final
 
 from cibuildwheel.ci import CIProvider, detect_ci_provider
 from cibuildwheel.errors import OCIEngineTooOldError
@@ -31,6 +31,15 @@ if TYPE_CHECKING:
     from typing import IO, Self
 
     from cibuildwheel.typing import PathOrStr
+
+
+@final
+class RemotePath(PurePosixPath):
+    pass
+
+
+BuilderPath = Path | RemotePath
+BuilderPathT = TypeVar("BuilderPathT", bound=BuilderPath)
 
 ContainerEngineName = Literal["docker", "podman"]
 
@@ -185,7 +194,7 @@ class AbstractContainer(Protocol):
         *,
         image: str,
         oci_platform: OCIPlatform,
-        cwd: PathOrStr | None = None,
+        cwd: BuilderPath | None = None,
         engine: OCIContainerEngineConfig | None = DEFAULT_ENGINE,
     ) -> AbstractContainer:
         if engine is None:
@@ -202,13 +211,13 @@ class AbstractContainer(Protocol):
         exc_tb: TracebackType | None,
     ) -> None: ...
 
-    def copy_into(self, from_path: Path, to_path: PurePath) -> None: ...
+    def copy_into(self, from_path: Path, to_path: RemotePath) -> None: ...
 
-    def copy_out(self, from_path: PurePath, to_path: Path) -> None: ...
+    def copy_out(self, from_path: RemotePath, to_path: Path) -> None: ...
 
     def get_environment(self) -> dict[str, str]: ...
 
-    def glob(self, path: PurePosixPath, pattern: str) -> list[PurePosixPath]: ...
+    def glob(self, path: BuilderPathT, pattern: str) -> list[BuilderPathT]: ...
 
     def call(
         self,
@@ -244,17 +253,18 @@ class Host(AbstractContainer):
     ) -> None:
         return None
 
-    def copy_into(self, from_path: Path, to_path: PurePath) -> None:
+    def copy_into(self, from_path: Path, to_path: RemotePath) -> None:
         raise NotImplementedError()
 
-    def copy_out(self, from_path: PurePath, to_path: Path) -> None:
+    def copy_out(self, from_path: RemotePath, to_path: Path) -> None:
         raise NotImplementedError()
 
     def get_environment(self) -> dict[str, str]:
         return os.environ.copy()
 
-    def glob(self, path: PurePosixPath, pattern: str) -> list[PurePosixPath]:
-        return [PurePosixPath(path_.as_posix()) for path_ in Path(path).glob(pattern)]
+    def glob(self, path: BuilderPathT, pattern: str) -> list[BuilderPathT]:
+        assert isinstance(path, Path)
+        return list(path.glob(pattern))
 
     def call(
         self,
@@ -318,6 +328,9 @@ class OCIContainer(AbstractContainer):
         if not image:
             msg = "Must have a non-empty image to run."
             raise ValueError(msg)
+
+        if cwd is not None:
+            assert isinstance(cwd, RemotePath)
 
         self.image = image
         self.oci_platform = oci_platform
@@ -518,7 +531,7 @@ class OCIContainer(AbstractContainer):
             log.warning(msg)
         self.name = None
 
-    def copy_into(self, from_path: Path, to_path: PurePath) -> None:
+    def copy_into(self, from_path: Path, to_path: RemotePath) -> None:
         if from_path.is_dir():
             self.call(["mkdir", "-p", to_path])
             subprocess.run(
@@ -554,12 +567,15 @@ class OCIContainer(AbstractContainer):
                         exec_process.returncode, exec_process.args, None, None
                     )
 
-    def copy_out(self, from_path: PurePath, to_path: Path) -> None:
+    def copy_out(self, from_path: RemotePath, to_path: Path) -> None:
         # note: we assume from_path is a dir
         to_path.mkdir(parents=True, exist_ok=True)
         call(self.engine.name, "cp", f"{self.name}:{from_path}/.", to_path)
 
-    def glob(self, path: PurePosixPath, pattern: str) -> list[PurePosixPath]:
+    def glob(self, path: BuilderPathT, pattern: str) -> list[BuilderPathT]:
+        assert not isinstance(path, Path)
+        result_type = type(path)
+
         glob_pattern = path.joinpath(pattern)
 
         path_strings = json.loads(
@@ -573,7 +589,7 @@ class OCIContainer(AbstractContainer):
             )
         )
 
-        return [PurePosixPath(p) for p in path_strings]
+        return [result_type(p) for p in path_strings]
 
     def call(
         self,

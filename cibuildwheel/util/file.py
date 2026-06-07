@@ -8,7 +8,7 @@ import tarfile
 import time
 import urllib.request
 from contextlib import contextmanager
-from pathlib import Path, PurePath
+from pathlib import Path
 from typing import Final
 from zipfile import ZipFile
 
@@ -20,6 +20,8 @@ from cibuildwheel.errors import FatalError
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
+
+    from cibuildwheel.oci_container import BuilderPath
 
 DEFAULT_CIBW_CACHE_PATH: Final[Path] = user_cache_path(appname="cibuildwheel", appauthor="pypa")
 CIBW_CACHE_PATH: Final[Path] = Path(
@@ -148,10 +150,11 @@ def move_file(src_file: Path, dst_file: Path) -> Path:
     return Path(resulting_file).resolve(strict=True)
 
 
-def copy_into_local(src: Path, dst: PurePath) -> None:
+def copy_into_local(src: Path, dst: BuilderPath) -> None:
     """Copy a path from src to dst, regardless of whether it's a file or a directory."""
     # Ensure the target folder location exists
-    Path(dst.parent).mkdir(exist_ok=True, parents=True)
+    assert isinstance(dst, Path)
+    dst.parent.mkdir(exist_ok=True, parents=True)
 
     if src.is_dir():
         shutil.copytree(src, dst)
@@ -162,8 +165,8 @@ def copy_into_local(src: Path, dst: PurePath) -> None:
 def copy_test_sources(
     test_sources: list[str],
     project_dir: Path,
-    test_dir: PurePath,
-    copy_into: Callable[[Path, PurePath], None] = copy_into_local,
+    test_dir: BuilderPath,
+    copy_into: Callable[[Path, BuilderPath], None] = copy_into_local,
 ) -> None:
     """Copy the list of test sources from the package to the test directory.
 

@@ -7,6 +7,7 @@ import pytest
 
 from cibuildwheel import errors
 from cibuildwheel.ci import fix_ansi_codes_for_github_actions
+from cibuildwheel.oci_container import RemotePath
 from cibuildwheel.util.file import copy_test_sources, remove_on_error
 from cibuildwheel.util.helpers import (
     FlexibleVersion,
@@ -382,7 +383,7 @@ def test_copy_test_sources_missing_file(tmp_path: Path, sample_project: Path) ->
 def test_copy_test_sources_alternate_copy_into(sample_project: Path) -> None:
     """If an alternate copy_into method is provided, it is used."""
 
-    target = PurePath("/container/test_cwd")
+    target = RemotePath("/container/test_cwd")
     copy_into = Mock()
 
     copy_test_sources(["pyproject.toml", "tests"], sample_project, target, copy_into=copy_into)
