@@ -9,7 +9,7 @@ import sys
 import textwrap
 from collections import OrderedDict
 from pathlib import Path, PurePath, PurePosixPath
-from typing import Final, Literal, Protocol, Self, assert_never, cast, final
+from typing import Final, Literal, Protocol, Self, assert_never, cast
 
 from cibuildwheel import errors
 from cibuildwheel.architecture import Architecture
@@ -19,7 +19,7 @@ from cibuildwheel.logger import log
 from cibuildwheel.oci_container import OCIContainer, OCIContainerEngineConfig, OCIPlatform
 from cibuildwheel.util import resources
 from cibuildwheel.util.cmd import call
-from cibuildwheel.util.file import copy_into_local, copy_test_sources
+from cibuildwheel.util.file import RemotePath, RemotePosixPath, copy_into_local, copy_test_sources
 from cibuildwheel.util.helpers import prepare_command, unwrap
 from cibuildwheel.util.packaging import find_compatible_wheel
 
@@ -30,12 +30,7 @@ if TYPE_CHECKING:
 
     from cibuildwheel.options import BuildOptions, Options
     from cibuildwheel.selector import BuildSelector
-    from cibuildwheel.typing import PathOrStr
-
-
-@final
-class RemotePath(PurePosixPath):
-    pass
+    from cibuildwheel.typing import PathOrStr, PathT
 
 
 BuilderPath = Path | RemotePath
@@ -83,13 +78,13 @@ class Builder(Protocol):
         exc_tb: TracebackType | None,
     ) -> None: ...
 
-    def copy_into(self, from_path: Path, to_path: PurePath) -> None: ...
+    def copy_into(self, from_path: Path, to_path: RemotePath) -> None: ...
 
-    def copy_out(self, from_path: PurePath, to_path: Path) -> None: ...
+    def copy_out(self, from_path: RemotePath, to_path: Path) -> None: ...
 
     def get_environment(self) -> dict[str, str]: ...
 
-    def glob(self, path: PurePosixPath, pattern: str) -> list[PurePosixPath]: ...
+    def glob(self, path: PathT, pattern: str) -> list[PathT]: ...
 
     def call(
         self,
@@ -125,16 +120,16 @@ class LocalBuilder:
     ) -> None:
         return None
 
-    def copy_into(self, from_path: Path, to_path: PurePath) -> None:
+    def copy_into(self, from_path: Path, to_path: RemotePath) -> None:
         raise NotImplementedError()
 
-    def copy_out(self, from_path: PurePath, to_path: Path) -> None:
+    def copy_out(self, from_path: RemotePath, to_path: Path) -> None:
         raise NotImplementedError()
 
     def get_environment(self) -> dict[str, str]:
         return os.environ.copy()
 
-    def glob(self, path: PurePosixPath, pattern: str) -> list[PurePosixPath]:
+    def glob(self, path: PathT, pattern: str) -> list[PathT]:
         assert isinstance(path, Path)
         return list(path.glob(pattern))
 
@@ -288,7 +283,7 @@ def build_in_container(
     if not isinstance(container_project_path, RemotePath):
         container_output_dir: BuilderPath = options.globals.output_dir
     else:
-        container_output_dir = RemotePath("/output")
+        container_output_dir = RemotePosixPath("/output")
         log.step("Copying project into container...")
         container.copy_into(Path.cwd(), container_project_path)
 
@@ -332,7 +327,7 @@ def build_in_container(
         )
         if local_constraints_file:
             if isinstance(container_output_dir, RemotePath):
-                container_constraints_file = RemotePath("/constraints.txt")
+                container_constraints_file = RemotePosixPath("/constraints.txt")
                 container.copy_into(local_constraints_file, container_constraints_file)
                 dependency_constraint_flags = ["-c", container_constraints_file]
             else:
@@ -396,7 +391,7 @@ def build_in_container(
             log.step("Building wheel...")
 
             if isinstance(container_output_dir, RemotePath):
-                temp_dir: BuilderPath = RemotePath("/tmp/cibuildwheel")
+                temp_dir: BuilderPath = RemotePosixPath("/tmp/cibuildwheel")
             else:
                 temp_dir = local_identifier_tmp_dir
 
@@ -483,12 +478,11 @@ def build_in_container(
             else:
                 container.call(["mv", built_wheel, repaired_wheel_dir])
 
-            assert isinstance(repaired_wheel_dir, PurePosixPath)
             match container.glob(repaired_wheel_dir, "*.whl"):
                 case []:
                     raise errors.RepairStepProducedNoWheelError()
-                case [repaired_wheel_pure_posix_path]:
-                    repaired_wheel = repaired_wheel_dir / repaired_wheel_pure_posix_path.name
+                case [repaired_wheel]:
+                    pass
                 case too_many:
                     raise errors.RepairStepProducedMultipleWheelsError([p.name for p in too_many])
 
@@ -622,7 +616,7 @@ def build(options: Options, tmp_path: Path) -> None:
             container_project_path: BuilderPath = Path(cwd)
             container_package_dir = container_project_path / abs_package_dir.relative_to(cwd)
         else:
-            container_project_path = RemotePath("/project")
+            container_project_path = RemotePosixPath("/project")
             container_package_dir = container_project_path / abs_package_dir.relative_to(cwd)
             try:
                 # check the container engine is installed

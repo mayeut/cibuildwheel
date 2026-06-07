@@ -10,7 +10,6 @@ import sys
 import textwrap
 import time
 from contextlib import nullcontext
-from pathlib import Path, PurePath, PurePosixPath
 
 import pytest
 import tomli_w
@@ -25,10 +24,12 @@ from cibuildwheel.oci_container import (
     OCIPlatform,
     _check_engine_version,
 )
+from cibuildwheel.util.file import RemotePosixPath
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 # Test utilities
 
@@ -254,7 +255,7 @@ def test_file_operation(
         original_test_file.parent.mkdir(parents=True, exist_ok=True)
         original_test_file.write_bytes(test_binary_data)
 
-        dst_file = PurePath("/tmp") / file_path
+        dst_file = RemotePosixPath("/tmp") / file_path
 
         container.copy_into(original_test_file, dst_file)
 
@@ -279,7 +280,7 @@ def test_dir_operations(tmp_path: Path, container_engine: OCIContainerEngineConf
         test_file = test_dir / "test.dat"
         shutil.copyfile(original_test_file, test_file)
 
-        dst_dir = PurePosixPath("/tmp/test_dir")
+        dst_dir = RemotePosixPath("/tmp/test_dir")
         dst_file = dst_dir / "test.dat"
         container.copy_into(test_dir, dst_dir)
 
@@ -387,7 +388,7 @@ def test_podman_vfs(
 
         # test copying a file into the container
         (tmp_path / "some_file.txt").write_text("1234")
-        container.copy_into(tmp_path / "some_file.txt", PurePosixPath("some_file.txt"))
+        container.copy_into(tmp_path / "some_file.txt", RemotePosixPath("some_file.txt"))
         assert container.call(["cat", "some_file.txt"], capture_output=True) == "1234"
 
     # Clean up

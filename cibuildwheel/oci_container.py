@@ -14,13 +14,13 @@ import textwrap
 import typing
 import uuid
 from enum import Enum
-from pathlib import PurePosixPath
 from typing import Literal, assert_never
 
 from cibuildwheel.ci import CIProvider, detect_ci_provider
 from cibuildwheel.errors import OCIEngineTooOldError
 from cibuildwheel.logger import log
 from cibuildwheel.util.cmd import call
+from cibuildwheel.util.file import RemotePath, RemotePosixPath
 from cibuildwheel.util.helpers import FlexibleVersion, parse_key_value_string, strtobool
 
 TYPE_CHECKING = False
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from types import TracebackType
     from typing import IO, Self
 
-    from cibuildwheel.typing import PathOrStr
+    from cibuildwheel.typing import PathOrStr, PathT
 
 ContainerEngineName = Literal["docker", "podman"]
 
@@ -425,7 +425,8 @@ class OCIContainer:
             log.warning(msg)
         self.name = None
 
-    def copy_into(self, from_path: Path, to_path: PurePath) -> None:
+    def copy_into(self, from_path: Path, to_path: RemotePath) -> None:
+        assert isinstance(to_path, RemotePosixPath)
         if from_path.is_dir():
             self.call(["mkdir", "-p", to_path])
             subprocess.run(
@@ -461,12 +462,15 @@ class OCIContainer:
                         exec_process.returncode, exec_process.args, None, None
                     )
 
-    def copy_out(self, from_path: PurePath, to_path: Path) -> None:
+    def copy_out(self, from_path: RemotePath, to_path: Path) -> None:
         # note: we assume from_path is a dir
+        assert isinstance(from_path, RemotePosixPath)
         to_path.mkdir(parents=True, exist_ok=True)
         call(self.engine.name, "cp", f"{self.name}:{from_path}/.", to_path)
 
-    def glob(self, path: PurePosixPath, pattern: str) -> list[PurePosixPath]:
+    def glob(self, path: PathT, pattern: str) -> list[PathT]:
+        assert isinstance(path, RemotePosixPath)
+        result_type = type(path)
         glob_pattern = path.joinpath(pattern)
 
         path_strings = json.loads(
@@ -480,7 +484,7 @@ class OCIContainer:
             )
         )
 
-        return [PurePosixPath(p) for p in path_strings]
+        return [result_type(p) for p in path_strings]
 
     def call(
         self,
