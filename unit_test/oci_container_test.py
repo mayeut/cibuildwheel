@@ -10,7 +10,6 @@ import sys
 import textwrap
 import time
 from contextlib import nullcontext
-from pathlib import Path, PurePosixPath
 
 import pytest
 import tomli_w
@@ -30,6 +29,7 @@ from cibuildwheel.oci_container import (
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 # Test utilities
 
@@ -388,7 +388,7 @@ def test_podman_vfs(
 
         # test copying a file into the container
         (tmp_path / "some_file.txt").write_text("1234")
-        container.copy_into(tmp_path / "some_file.txt", PurePosixPath("some_file.txt"))
+        container.copy_into(tmp_path / "some_file.txt", RemotePath("some_file.txt"))
         assert container.call(["cat", "some_file.txt"], capture_output=True) == "1234"
 
     # Clean up
