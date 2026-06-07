@@ -485,6 +485,7 @@ def test_parse_engine_config(
     config: str, name: str, create_args: tuple[str, ...], capsys: pytest.CaptureFixture[str]
 ) -> None:
     engine_config = OCIContainerEngineConfig.from_config_string(config)
+    assert engine_config is not None
     assert engine_config.name == name
     assert engine_config.create_args == create_args
     if "--platform" in config:
@@ -531,6 +532,7 @@ def test_disable_host_mount(
         pytest.skip("Skipping test because docker on this platform does not support host mounts")
 
     engine = OCIContainerEngineConfig.from_config_string(config.format(name=container_engine.name))
+    assert engine is not None
 
     sentinel_file = tmp_path / "sentinel"
     sentinel_file.write_text("12345")
@@ -864,5 +866,6 @@ def test_engine_version(
 
     monkeypatch.setattr(cibuildwheel.oci_container, "call", mockcall)
     engine = OCIContainerEngineConfig.from_config_string(engine_name)
+    assert engine is not None
     with context:
         _check_engine_version(engine)

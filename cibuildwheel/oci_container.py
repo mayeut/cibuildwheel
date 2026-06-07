@@ -76,13 +76,15 @@ class OCIContainerEngineConfig:
     disable_host_mount: bool = False
 
     @classmethod
-    def from_config_string(cls, config_string: str) -> Self:
+    def from_config_string(cls, config_string: str) -> Self | None:
         config_dict = parse_key_value_string(
             config_string,
             ["name"],
             ["create_args", "create-args", "disable_host_mount", "disable-host-mount"],
         )
         name = " ".join(config_dict["name"])
+        if name == "none":
+            return None
         if name not in {"docker", "podman"}:
             msg = f"unknown container engine {name}"
             raise ValueError(msg)
@@ -190,6 +192,8 @@ class OCIContainer:
         >>> from cibuildwheel.oci_container import *  # NOQA
         >>> from cibuildwheel.options import _get_pinned_container_images
         >>> import pytest
+        >>> if os.environ.get("CIBW_CONTAINER_ENGINE", "docker") == "none":
+        ...     pytest.skip('needs a container engine')
         >>> try:
         ...     oci_platform = OCIPlatform.native()
         ... except OSError as ex:
