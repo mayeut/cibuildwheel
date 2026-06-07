@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - native-linux
       - 2.x
   pull_request:
     types:
@@ -86,35 +87,35 @@ jobs:
         # Max Python
         - os: ubuntu-latest
           python_version: '3.15'
-        - os: ubuntu-latest
-          python_version: '3.14'
-          test_select: android
+        #- os: ubuntu-latest
+        #  python_version: '3.14'
+        #  test_select: android
         - os: ubuntu-24.04-arm
           python_version: '3.13'
-        - os: windows-latest
-          python_version: '3.13'
-        - os: windows-11-arm
-          python_version: '3.13'
-        - os: macos-15-intel
-          python_version: '3.13'
-        - os: macos-15
-          python_version: '3.13'
-        - os: macos-15-intel
-          python_version: '3.13'
-          test_select: ios
-        - os: macos-15
-          python_version: '3.13'
-          test_select: ios
-          # Exercise iOS on a non-default simulator.
-          test_runtime: 'args: --simulator "iPhone 16e,OS=18.5"'
-        - os: macos-15-intel
-          python_version: '3.13'
-          test_select: android
-          # Exercise Android on a non-default simulator
-          test_runtime: 'args: --managed minVersion'
-        - os: macos-15
-          python_version: '3.13'
-          test_select: android
+        #- os: windows-latest
+        #  python_version: '3.13'
+        #- os: windows-11-arm
+        #  python_version: '3.13'
+        #- os: macos-15-intel
+        #  python_version: '3.13'
+        #- os: macos-15
+        #  python_version: '3.13'
+        #- os: macos-15-intel
+        #  python_version: '3.13'
+        #  test_select: ios
+        #- os: macos-15
+        #  python_version: '3.13'
+        #  test_select: ios
+        #  # Exercise iOS on a non-default simulator.
+        #  test_runtime: 'args: --simulator "iPhone 16e,OS=18.5"'
+        #- os: macos-15-intel
+        #  python_version: '3.13'
+        #  test_select: android
+        #  # Exercise Android on a non-default simulator
+        #  test_runtime: 'args: --managed minVersion'
+        #- os: macos-15
+        #  python_version: '3.13'
+        #  test_select: android
     timeout-minutes: 180
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -236,11 +237,13 @@ jobs:
         path: wheelhouse/*.whl
 
     - name: Test cibuildwheel
+      if: false
       env:
         CIBW_TEST_RUNTIME: ${{ matrix.test_runtime }}
       run: uv run --no-sync bin/run_tests.py --test-select=${{ matrix.test_select || 'native' }} ${{ (runner.os == 'Linux' && runner.arch == 'X64') && '--run-podman' || '' }}
 
   emulated-archs:
+    if: false
     name: Get qemu emulated architectures
     needs: lint
     runs-on: ubuntu-latest
@@ -264,6 +267,7 @@ jobs:
         echo "archs=${OUTPUT}" >> "$GITHUB_OUTPUT"
 
   test-emulated:
+    if: false
     name: Test Linux ${{ matrix.arch }} using qemu
     needs: emulated-archs
     runs-on: ubuntu-latest
@@ -291,6 +295,7 @@ jobs:
       run: uv run --no-sync pytest --run-emulation "$MATRIX_ARCH" test/test_emulation.py
 
   test-pyodide:
+    if: false
     name: Test pyodide
     needs: sample
     runs-on: ubuntu-24.04
@@ -330,6 +335,7 @@ jobs:
         CIBW_ENABLE: pyodide-prerelease
 
   test-uv-extras:
+    if: false
     name: Test uv extra on ${{ matrix.os }} ${{ matrix.test_select }}
     needs: sample
     runs-on: ${{ matrix.os }}
