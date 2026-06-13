@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from types import TracebackType
     from typing import IO, Self
 
+    from cibuildwheel.options import OCIImage
     from cibuildwheel.typing import PathOrStr
 
 ContainerEngineName = Literal["docker", "podman"]
@@ -231,12 +232,12 @@ class OCIContainer:
     def __init__(
         self,
         *,
-        image: str,
+        image: OCIImage,
         oci_platform: OCIPlatform,
         cwd: PathOrStr | None = None,
         engine: OCIContainerEngineConfig = DEFAULT_ENGINE,
     ):
-        if not image:
+        if not image.reference:
             msg = "Must have a non-empty image to run."
             raise ValueError(msg)
 
@@ -262,7 +263,7 @@ class OCIContainer:
                 self.engine.name,
                 "image",
                 "inspect",
-                self.image,
+                self.image.reference,
                 "--format",
                 (
                     "{{.Os}}/{{.Architecture}}/{{.Variant}}"
@@ -305,7 +306,7 @@ class OCIContainer:
             ctr_cmd = ["uname", "-m"]
             try:
                 container_machine = call(
-                    *run_cmd, *platform_args, self.image, *ctr_cmd, capture_stdout=True
+                    *run_cmd, *platform_args, self.image.reference, *ctr_cmd, capture_stdout=True
                 ).strip()
             except subprocess.CalledProcessError:
                 if self.oci_platform == OCIPlatform.i386:
@@ -313,7 +314,11 @@ class OCIContainer:
                     # Let's try that
                     platform_args = self._get_platform_args(oci_platform=OCIPlatform.AMD64)
                     container_machine = call(
-                        *run_cmd, *platform_args, self.image, *ctr_cmd, capture_stdout=True
+                        *run_cmd,
+                        *platform_args,
+                        self.image.reference,
+                        *ctr_cmd,
+                        capture_stdout=True,
                     ).strip()
                 else:
                     raise
@@ -323,7 +328,7 @@ class OCIContainer:
                 call(
                     *run_cmd,
                     *platform_args,
-                    self.image,
+                    self.image.reference,
                     "linux32",
                     "/bin/true",
                     capture_stdout=True,
@@ -343,7 +348,7 @@ class OCIContainer:
                 *network_args,
                 *platform_args,
                 *self.engine.create_args,
-                self.image,
+                self.image.reference,
                 *shell_args,
             ],
             check=True,

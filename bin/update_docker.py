@@ -7,8 +7,8 @@
 # ]
 # ///
 
-import configparser
 import dataclasses
+from collections import defaultdict
 from functools import cache
 from pathlib import Path
 
@@ -88,6 +88,9 @@ IMAGES = [
         "musllinux_1_2", ["x86_64", "i686", "aarch64", "ppc64le", "s390x", "armv7l", "riscv64"]
     ),
 ]
+# IMAGES = [
+#   PyPAImage("manylinux_2_35", ["armv7l"]),
+# ]
 
 
 @cache
@@ -170,7 +173,7 @@ def get_from_dockerhub(image_name: str, tag_name: str) -> tuple[str, str]:
 
 
 def main() -> None:
-    config = configparser.ConfigParser()
+    config: dict[str, dict[str, tuple[str, str, str]]] = defaultdict(dict)
     for image in IMAGES:
         # get the tag name whose digest matches 'latest'
         # if image has been pinned, do not update
@@ -184,17 +187,27 @@ def main() -> None:
 
         tag_name, digest = get_function(image.image_name, search_tag)
         for platform in image.platforms:
-            if not config.has_section(platform):
-                config[platform] = {}
             image_name = image.image_name
             if image.use_platform_suffix:
                 image_name = f"{image_name}_{platform.removeprefix('pypy_')}"
                 _, digest = get_function(image_name, tag_name)
             assert digest.startswith("sha256:")
-            config[platform][image.manylinux_version] = f"{image_name}@{digest}  # {tag_name}"
+            # config[platform][image.manylinux_version] = f"{image_name}@{digest}  # {tag_name}"
+            config[platform][image.manylinux_version] = (image_name, digest, tag_name)
 
-    with open(RESOURCES / "pinned_docker_images.cfg", "w") as f:
-        config.write(f)
+    with (RESOURCES / "pinned_docker_images.toml").open("w") as f:
+        first = True
+        for platform, versions in config.items():
+            if first:
+                first = False
+            else:
+                f.write("\n")
+            f.write(f"[{platform}]\n")
+            for manylinux_version in versions:
+                image_name, digest, tag_name = versions[manylinux_version]
+                f.write(
+                    f'{manylinux_version} = {{ name = "{image_name}", tag = "{tag_name}", digest = "{digest}" }}\n'
+                )
 
 
 if __name__ == "__main__":

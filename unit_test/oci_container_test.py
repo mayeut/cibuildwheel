@@ -25,6 +25,7 @@ from cibuildwheel.oci_container import (
     OCIPlatform,
     _check_engine_version,
 )
+from cibuildwheel.options import OCIImage
 
 TYPE_CHECKING = False
 if TYPE_CHECKING:
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 
 # for these tests we use manylinux2014 images, because they're available on
 # multi architectures and include python3.8
-DEFAULT_IMAGE = "quay.io/pypa/manylinux2014:2025.03.08-1"
+DEFAULT_IMAGE = OCIImage(name="quay.io/pypa/manylinux2014", tag="2025.03.08-1")
 DEFAULT_OCI_PLATFORM = OCIPlatform.native()
 
 PODMAN = OCIContainerEngineConfig(name="podman")
@@ -572,7 +573,9 @@ def test_local_image(
         [container_engine.name, "pull", f"--platform={platform.value}", remote_image],
         check=True,
     )
-    container = OCIContainer(engine=container_engine, image=local_image, oci_platform=platform)
+    container = OCIContainer(
+        engine=container_engine, image=OCIImage(name=local_image), oci_platform=platform
+    )
     # before image is built & available, we want to pull it
     subprocess.run([container_engine.name, "rmi", local_image], check=False)
     assert container._get_platform_args() == (f"--platform={platform.value}", "--pull=always")
@@ -604,7 +607,9 @@ def test_enter_error(container_engine: OCIContainerEngineConfig, tmp_path: Path)
         check=True,
         cwd=tmp_path,
     )
-    container = OCIContainer(engine=container_engine, image=local_image, oci_platform=platform)
+    container = OCIContainer(
+        engine=container_engine, image=OCIImage(name=local_image), oci_platform=platform
+    )
     with pytest.raises(subprocess.CalledProcessError, match="/bin/true"), container:
         pass
     assert container.name is None
@@ -622,7 +627,9 @@ def test_enter_error_cleanup_failure(
     )
     monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: result)
     engine = OCIContainerEngineConfig("docker")
-    container = OCIContainer(engine=engine, image="foo", oci_platform=OCIPlatform.AMD64)
+    container = OCIContainer(
+        engine=engine, image=OCIImage(name="foo"), oci_platform=OCIPlatform.AMD64
+    )
     container.name = "bar"
     container._remove_container()
     out, err = capsys.readouterr()
@@ -680,7 +687,9 @@ def _container_ready_for_exit(
     """Build a container with the post-__enter__ state faked, ready for __exit__."""
     monkeypatch.setattr(cibuildwheel.oci_container, "detect_ci_provider", lambda: None)
     container = OCIContainer(
-        engine=OCIContainerEngineConfig("docker"), image="foo", oci_platform=OCIPlatform.AMD64
+        engine=OCIContainerEngineConfig("docker"),
+        image=OCIImage(name="foo"),
+        oci_platform=OCIPlatform.AMD64,
     )
     container.name = "bar"
     removed: list[bool] = []
@@ -763,7 +772,9 @@ def test_multiarch_image(container_engine: OCIContainerEngineConfig, platform: O
             pytest.xfail("podman fails with i386 images on macOS")
 
     with OCIContainer(
-        engine=container_engine, image="debian:trixie-slim", oci_platform=platform
+        engine=container_engine,
+        image=OCIImage(name="debian", tag="trixie-slim"),
+        oci_platform=platform,
     ) as container:
         output = container.call(["uname", "-m"], capture_output=True)
         output_map_kernel = {

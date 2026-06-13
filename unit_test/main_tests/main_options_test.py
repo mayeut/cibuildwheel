@@ -206,7 +206,7 @@ def test_manylinux_images(
 
     if platform == "linux":
         assert fnmatch(
-            build_options.manylinux_images[architecture],
+            build_options.manylinux_images[architecture].reference,
             full_image,
         )
     else:
