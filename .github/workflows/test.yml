@@ -237,6 +237,7 @@ jobs:
 
     - name: Test cibuildwheel
       env:
+        CIBW_PLATFORM: ${{ matrix.test_select }}
         CIBW_TEST_RUNTIME: ${{ matrix.test_runtime }}
       run: uv run --no-sync bin/run_tests.py --test-select=${{ matrix.test_select || 'native' }} ${{ (runner.os == 'Linux' && runner.arch == 'X64') && '--run-podman' || '' }}
 
