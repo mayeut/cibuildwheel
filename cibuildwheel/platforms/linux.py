@@ -33,6 +33,7 @@ from cibuildwheel.audit import needs_audit, run_audit
 from cibuildwheel.frontend import get_build_frontend_extra_flags, prepare_config_settings
 from cibuildwheel.logger import log
 from cibuildwheel.oci_container import OCIContainer, OCIContainerEngineConfig, OCIPlatform
+from cibuildwheel.options import OCIImage
 from cibuildwheel.util import resources
 from cibuildwheel.util.file import copy_test_sources
 from cibuildwheel.util.helpers import prepare_command, unwrap
@@ -73,7 +74,7 @@ class BuildStep:
     platform_configs: list[PythonConfiguration]
     platform_tag: str
     container_engine: OCIContainerEngineConfig
-    container_image: str
+    container_image: OCIImage
 
 
 def all_python_configurations() -> list[PythonConfiguration]:
@@ -99,7 +100,7 @@ def get_python_configurations(
 
 def container_image_for_python_configuration(
     config: PythonConfiguration, build_options: BuildOptions
-) -> str:
+) -> OCIImage:
     # e.g
     # identifier is 'cp310-manylinux_x86_64'
     # platform_tag is 'manylinux_x86_64'
@@ -124,7 +125,7 @@ def get_build_steps(
     Groups PythonConfigurations into BuildSteps. Each BuildStep represents a
     separate container instance.
     """
-    steps = OrderedDict[tuple[str, str, str, OCIContainerEngineConfig], BuildStep]()
+    steps = OrderedDict[tuple[str, OCIImage, str, OCIContainerEngineConfig], BuildStep]()
 
     for config in python_configurations:
         _, platform_tag = config.identifier.split("-", 1)

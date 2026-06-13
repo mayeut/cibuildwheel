@@ -13,7 +13,6 @@ __lazy_modules__ = {
     "cibuildwheel.util.helpers",
     "cibuildwheel.util.packaging",
     "collections",
-    "configparser",
     "contextlib",
     "difflib",
     "packaging",
@@ -25,7 +24,6 @@ __lazy_modules__ = {
 }
 
 import collections
-import configparser
 import contextlib
 import dataclasses
 import difflib
@@ -35,6 +33,7 @@ import shlex
 import textwrap
 import tomllib
 from collections.abc import Mapping, Sequence
+from functools import cached_property
 from pathlib import Path
 from typing import assert_never
 
@@ -80,6 +79,27 @@ MUSLLINUX_ARCHS: Final[tuple[str, ...]] = (
     "armv7l",
     "riscv64",
 )
+
+
+@dataclasses.dataclass(frozen=True, kw_only=True)
+class OCIImage:
+    name: str
+    tag: str | None = None
+    digest: str | None = None
+
+    @cached_property
+    def reference(self) -> str:
+        if self.digest is not None:
+            return f"{self.name}@{self.digest}"
+        if self.tag is not None:
+            return f"{self.name}:{self.tag}"
+        return self.name
+
+    def __str__(self) -> str:
+        result = self.reference
+        if self.digest is not None and self.tag is not None:
+            result += f" (tag: {self.tag})"
+        return result
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -146,8 +166,8 @@ class BuildOptions:
     xbuild_tools: list[str] | None
     xbuild_files: dict[str, list[str]]
     repair_command: str
-    manylinux_images: dict[str, str] | None
-    musllinux_images: dict[str, str] | None
+    manylinux_images: dict[str, OCIImage] | None
+    musllinux_images: dict[str, OCIImage] | None
     dependency_constraints: DependencyConstraints
     test_command: str | None
     before_test: str | None
@@ -738,7 +758,7 @@ class Options:
             allow_empty=allow_empty,
         )
 
-    def _check_pinned_image(self, value: str, pinned_images: Mapping[str, str]) -> None:
+    def _check_pinned_image(self, value: str, pinned_images: Mapping[str, OCIImage]) -> None:
         error_set = {"manylinux1", "manylinux2010", "manylinux_2_24", "musllinux_1_1"}
         # Currently no warnings, next: https://github.com/pypa/manylinux/issues/1925
         warning_set: set[str] = set()
@@ -893,8 +913,8 @@ class Options:
             except ValueError:
                 build_verbosity = 0
 
-            manylinux_images: dict[str, str] = {}
-            musllinux_images: dict[str, str] = {}
+            manylinux_images: dict[str, OCIImage] = {}
+            musllinux_images: dict[str, OCIImage] = {}
             container_engine: OCIContainerEngineConfig | None = None
 
             if self.platform == "linux":
@@ -906,7 +926,9 @@ class Options:
                         f"manylinux-{build_platform}-image", ignore_empty=True
                     )
                     self._check_pinned_image(config_value, pinned_images)
-                    manylinux_images[build_platform] = pinned_images.get(config_value, config_value)
+                    manylinux_images[build_platform] = pinned_images.get(
+                        config_value, OCIImage(name=config_value)
+                    )
 
                 for build_platform in MUSLLINUX_ARCHS:
                     pinned_images = all_pinned_container_images[build_platform]
@@ -914,7 +936,9 @@ class Options:
                         f"musllinux-{build_platform}-image", ignore_empty=True
                     )
                     self._check_pinned_image(config_value, pinned_images)
-                    musllinux_images[build_platform] = pinned_images.get(config_value, config_value)
+                    musllinux_images[build_platform] = pinned_images.get(
+                        config_value, OCIImage(name=config_value)
+                    )
 
             container_engine_str = self.reader.get(
                 "container-engine",
@@ -1116,7 +1140,7 @@ def compute_options(
 
 
 @functools.cache
-def _get_pinned_container_images() -> Mapping[str, Mapping[str, str]]:
+def _get_pinned_container_images() -> Mapping[str, Mapping[str, OCIImage]]:
     """
     This looks like a dict of dicts, e.g.
     { 'x86_64': {'manylinux1': '...', 'manylinux2010': '...', 'manylinux2014': '...'},
@@ -1124,6 +1148,10 @@ def _get_pinned_container_images() -> Mapping[str, Mapping[str, str]]:
       'pypy_x86_64': {'manylinux2010': '...' }
       ... }
     """
-    all_pinned_images = configparser.ConfigParser()
-    all_pinned_images.read(resources.PINNED_DOCKER_IMAGES)
+    pinned_images = tomllib.loads(resources.PINNED_DOCKER_IMAGES.read_text())
+    all_pinned_images: dict[str, dict[str, OCIImage]] = {}
+    for platform, images in pinned_images.items():
+        all_pinned_images[platform] = {}
+        for version, image in images.items():
+            all_pinned_images[platform][version] = OCIImage(**image)
     return all_pinned_images

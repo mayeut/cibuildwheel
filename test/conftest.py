@@ -106,7 +106,7 @@ def docker_warmup(request: pytest.FixtureRequest) -> None:
     )
     for image in images:
         container_id = subprocess.run(
-            ["docker", "create", image, "bash", "-c", command],
+            ["docker", "create", image.reference, "bash", "-c", command],
             text=True,
             check=True,
             stdout=subprocess.PIPE,
@@ -118,7 +118,9 @@ def docker_warmup(request: pytest.FixtureRequest) -> None:
             ).stdout.strip()
             assert exit_code == "0"
             subprocess.run(
-                ["docker", "commit", container_id, image], check=True, stdout=subprocess.DEVNULL
+                ["docker", "commit", container_id, image.reference],
+                check=True,
+                stdout=subprocess.DEVNULL,
             )
         finally:
             subprocess.run(["docker", "rm", container_id], check=True, stdout=subprocess.DEVNULL)
