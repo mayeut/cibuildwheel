@@ -156,7 +156,7 @@ def docker_warmup(images: list[DockerWarmUpImage], docker_warmup_config: Path) -
 @pytest.fixture(scope="session", autouse=True)
 def docker_warmup_fixture(
     request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory, worker_id: str
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     # if we're in CI testing linux, let's warm-up docker images
     if detect_ci_provider() is None or get_platform() != "linux":
         images = None
@@ -201,7 +201,7 @@ def build_frontend_env_nouv(request: pytest.FixtureRequest) -> dict[str, str]:
 
 
 @pytest.fixture(params=["pip", "build", "build[uv]", "uv"])
-def build_frontend_env(request: pytest.FixtureRequest) -> Generator[dict[str, str], None, None]:
+def build_frontend_env(request: pytest.FixtureRequest) -> Generator[dict[str, str]]:
     frontend = request.param
     marks = {m.name for m in request.node.iter_markers()}
     if "android" in marks:
@@ -237,7 +237,7 @@ def build_frontend_env(request: pytest.FixtureRequest) -> Generator[dict[str, st
 
 
 @pytest.fixture
-def docker_cleanup() -> Generator[None, None, None]:
+def docker_cleanup() -> Generator[None]:
     def get_images() -> set[str]:
         if detect_ci_provider() is None or get_platform() != "linux":
             return set()

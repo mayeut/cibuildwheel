@@ -252,7 +252,7 @@ def _expected_wheels(
     python_abi_tags: list[str] | None,
     include_universal2: bool,
     single_python: bool,
-) -> Generator[str, None, None]:
+) -> Generator[str]:
     """
     Returns a list of expected wheels from a run of cibuildwheel.
     """

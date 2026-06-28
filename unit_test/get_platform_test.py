@@ -23,7 +23,7 @@ if not sys.platform.startswith("win") and not TYPE_CHECKING:
 @contextlib.contextmanager
 def patched_environment(
     monkeypatch: pytest.MonkeyPatch, environment: dict[str, str]
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     with monkeypatch.context() as mp:
         for envvar, val in environment.items():
             mp.setenv(name=envvar, value=val)
