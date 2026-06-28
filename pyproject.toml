@@ -9,7 +9,7 @@ description = "Build Python wheels on CI with minimal configuration."
 readme = "README.md"
 license = "BSD-2-Clause"
 license-files = ["LICENSE"]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 authors = [
     { name = "Joe Rickerby", email = "joerick@mac.com" },
 ]
@@ -28,7 +28,6 @@ classifiers = [
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -107,7 +106,7 @@ markers = [
 required_plugins = ["pytest-rerunfailures"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 files = [
     "cibuildwheel/*.py",
     "test/**/*.py",
@@ -131,7 +130,7 @@ ignore_missing_imports = true
 
 
 [tool.pylint]
-py-version = "3.11"
+py-version = "3.12"
 jobs = "0"
 fail-on = ["E", "F"]
 fail-under = "9.8"
