@@ -16,7 +16,6 @@ __lazy_modules__ = {
     "cibuildwheel.util.helpers",
     "cibuildwheel.util.resources",
     "contextlib",
-    "functools",
     "io",
     "pathlib",
     "shutil",
@@ -28,7 +27,6 @@ __lazy_modules__ = {
 import argparse
 import contextlib
 import dataclasses
-import functools
 import io
 import os
 import shutil
@@ -92,13 +90,7 @@ def main_inner(global_options: GlobalOptions) -> None:
     `main_inner` is the same as `main`, but it raises FatalError exceptions
     rather than exiting directly.
     """
-    # Default in 3.15+, only needed on 3.14
-    if sys.version_info >= (3, 14):
-        arg_parser = functools.partial(argparse.ArgumentParser, suggest_on_error=True)
-    else:
-        arg_parser = argparse.ArgumentParser
-
-    parser = arg_parser(
+    parser = argparse.ArgumentParser(
         description="Build wheels for all the platforms.",
         epilog="""
             Most options are supplied via environment variables or in
@@ -106,6 +98,7 @@ def main_inner(global_options: GlobalOptions) -> None:
             https://github.com/pypa/cibuildwheel#options for info.
         """,
         allow_abbrev=False,
+        suggest_on_error=True,  # Default in 3.15+, only needed on 3.14
     )
 
     parser.add_argument(

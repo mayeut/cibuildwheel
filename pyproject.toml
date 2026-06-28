@@ -9,7 +9,7 @@ description = "Build Python wheels on CI with minimal configuration."
 readme = "README.md"
 license = "BSD-2-Clause"
 license-files = ["LICENSE"]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 authors = [
     { name = "Joe Rickerby", email = "joerick@mac.com" },
 ]
@@ -28,7 +28,6 @@ classifiers = [
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -105,7 +104,7 @@ markers = [
 required_plugins = ["pytest-rerunfailures"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 files = [
     "cibuildwheel/*.py",
     "test/**/*.py",
@@ -129,7 +128,7 @@ ignore_missing_imports = true
 
 
 [tool.pylint]
-py-version = "3.13"
+py-version = "3.14"
 jobs = "0"
 fail-on = ["E", "F"]
 fail-under = "9.8"
@@ -230,8 +229,8 @@ future-annotations = true
 "typing.TYPE_CHECKING".msg = "Use TYPE_CHECKING=False instead"
 
 [tool.ruff.lint.per-file-ignores]
-"unit_test/*" = ["PLC1901", "TID252"]
-"test/*" = ["TID252"]
+"unit_test/*" = ["PLC1901", "TC", "TID252"]
+"test/*" = ["TC", "TID252"]
 "bin/*" = ["TID251"]
 "cibuildwheel/resources/install_certifi.py" = ["PTH"]
 
@@ -239,10 +238,7 @@ future-annotations = true
 ignore = ["PC170", "PP303"]
 
 [tool.check-wheel-contents]
-ignore = [
-  "W002",  # constraints-*.txt are allowed to be duplicates of one another
-  "W004",  # "-" is fine for our iOS support files for now
-]
+ignore = ["W002"]  # constraints-*.txt are allowed to be duplicates of one another
 
 [tool.codespell]
 ignore-words-list = [

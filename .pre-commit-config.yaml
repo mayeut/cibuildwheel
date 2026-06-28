@@ -28,8 +28,8 @@ repos:
   rev: d2823d321df3af8f878f7ee3414dc94d037145b9  # frozen: v2.1.0
   hooks:
   - id: mypy
-    name: mypy 3.13 on cibuildwheel/
-    args: ["--python-version=3.13"]
+    name: mypy 3.14 on cibuildwheel/
+    args: ["--python-version=3.14"]
     additional_dependencies: &mypy-dependencies
       - bracex
       - build
