@@ -497,6 +497,11 @@ def test_parse_engine_config(
         )
 
 
+def test_parse_engine_config_none() -> None:
+    engine_config = OCIContainerEngineConfig.from_config_string("none")
+    assert engine_config is None
+
+
 @pytest.mark.skipif(DEFAULT_OCI_PLATFORM != OCIPlatform.AMD64, reason="Only runs on x86_64")
 def test_enforce_32_bit(container_engine: OCIContainerEngineConfig) -> None:
     with OCIContainer(
