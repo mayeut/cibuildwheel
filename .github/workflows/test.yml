@@ -88,12 +88,12 @@ jobs:
         - os: ubuntu-latest
           python_version: '3.11'
         # Max Python
-        - os: ubuntu-latest
+        - os: ubuntu-26.04
           python_version: '3.15'
-        - os: ubuntu-latest
+        - os: ubuntu-26.04
           python_version: '3.14'
           test_select: android
-        - os: ubuntu-24.04-arm
+        - os: ubuntu-26.04-arm
           python_version: '3.13'
         - os: windows-latest
           python_version: '3.13'
