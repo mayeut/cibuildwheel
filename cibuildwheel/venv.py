@@ -267,7 +267,7 @@ def uv_ca_warning(uv_path: Path) -> str | None:
             [uv_path, "--version"], capture_output=True, text=True, check=True
         ).stdout
         version = Version(output.split()[1])
-    except (OSError, subprocess.CalledProcessError, IndexError, InvalidVersion):
+    except OSError, subprocess.CalledProcessError, IndexError, InvalidVersion:
         return None
     if version >= Version(_UV_CA_FIX_VERSION):
         return None
