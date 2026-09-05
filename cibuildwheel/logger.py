@@ -251,7 +251,7 @@ class Logger:
             print(f"cibuildwheel: {c.bright_red}error{c.end}: {error}\n", file=sys.stderr)
 
     @contextlib.contextmanager
-    def print_summary(self, *, options: Options) -> Generator[None, None, None]:
+    def print_summary(self, *, options: Options) -> Generator[None]:
         start = time.time()
         yield
         duration = time.time() - start

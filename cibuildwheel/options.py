@@ -571,7 +571,7 @@ class OptionsReader:
         ]
 
     @contextlib.contextmanager
-    def identifier(self, identifier: str | None) -> Generator[None, None, None]:
+    def identifier(self, identifier: str | None) -> Generator[None]:
         self.current_identifier = identifier
         try:
             yield

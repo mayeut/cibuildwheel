@@ -453,7 +453,7 @@ def print_preamble(platform: str, options: Options, identifiers: Sequence[str]) 
     print("Here we go!\n")
 
 
-def detect_errors(*, options: Options, identifiers: Iterable[str]) -> Generator[str, None, None]:
+def detect_errors(*, options: Options, identifiers: Iterable[str]) -> Generator[str]:
     # Check for deprecated CIBW_FREE_THREADED_SUPPORT environment variable
     if "CIBW_FREE_THREADED_SUPPORT" in os.environ:
         yield "CIBW_FREE_THREADED_SUPPORT environment variable is no longer supported."
@@ -470,7 +470,7 @@ def detect_errors(*, options: Options, identifiers: Iterable[str]) -> Generator[
             )
 
 
-def detect_warnings(*, options: Options) -> Generator[str, None, None]:
+def detect_warnings(*, options: Options) -> Generator[str]:
     python_version_deprecation = ((3, 11), 3)
     if sys.version_info[:2] < python_version_deprecation[0]:
         python_version = ".".join(map(str, python_version_deprecation[0]))
