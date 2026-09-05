@@ -409,7 +409,7 @@ class OCIContainer:
                 # for a discussion on possible causes and attempts to remove this
                 # line. For now, this seems to work "well enough".
                 self.process.wait()
-        except (OSError, subprocess.TimeoutExpired):
+        except OSError, subprocess.TimeoutExpired:
             # bash didn't shut down cleanly; force the process down so it isn't
             # leaked, then continue to cleanup.
             if self.process.poll() is None:
