@@ -5,6 +5,15 @@ ref: changelog
 
 # Changelog
 
+### v4.2.1
+
+_5 September 2026_
+
+- 🐛 Respects the NuGet package sources configured on the machine when installing CPython on Windows, instead of always falling back to nuget.org (#2966)
+- 🐛 Fixes a `NameError` on Pyodide when an already-compatible wheel was reused, which made the test step fail (#2968)
+- 🛠 Updates the Android Python versions, and the Android testbed's Gradle version, making it compatible with Java 25 (#2962)
+- 🛠 Updates dependencies including CPython 3.15.0rc2 (#2965, #2970, #2976, #2981, #2985)
+
 ### v4.2.0
 
 _4 August 2026_

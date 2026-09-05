@@ -97,7 +97,7 @@ jobs:
       - uses: actions/setup-python@v6
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==4.2.0
+        run: python -m pip install cibuildwheel==4.2.1
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
@@ -238,6 +238,15 @@ Changelog
 
 <!-- [[[cog from readme_changelog import mini_changelog; print(mini_changelog()) ]]] -->
 
+### v4.2.1
+
+_5 September 2026_
+
+- 🐛 Respects the NuGet package sources configured on the machine when installing CPython on Windows, instead of always falling back to nuget.org (#2966)
+- 🐛 Fixes a `NameError` on Pyodide when an already-compatible wheel was reused, which made the test step fail (#2968)
+- 🛠 Updates the Android Python versions, and the Android testbed's Gradle version, making it compatible with Java 25 (#2962)
+- 🛠 Updates dependencies including CPython 3.15.0rc2 (#2965, #2970, #2976, #2981, #2985)
+
 ### v4.2.0
 
 _4 August 2026_
@@ -340,18 +349,7 @@ See @henryiii's [release post](https://iscinumpy.dev/post/cibuildwheel-4-0-0/) f
 - 📚 Links back to source in docs (#2806)
 - 📚 Removes outdated numpy info (#2855)
 
-
-### v3.4.1
-
-_2 April 2026_
-
-- ⚠️ Building for the experimental CPython 3.13 free-threading variant is now deprecated. That functionality will be removed in the next minor release. The [`enable`](https://cibuildwheel.pypa.io/en/stable/options/#enable) option `cpython-freethreading` is therefore also deprecated. Builds specifying `enable = "all"` no longer select `cpython-freethreading`. CPython 3.14 free-threading support remains available without the `enable` flag. (#2787)
-- 🐛 iOS builds will no longer skip `repair-wheel-command` if it's defined in config (#2761)
-- 🐛 Fix bug causing `uv` to fail when environments define PYTHON_VERSION or UV_PYTHON, conflicting with our venvs (#2795)
-- ✨ cibuildwheel prints the selected build identifiers at the start of the build. (#2785)
-- 🔐 The GitHub Action now references other actions with a full SHA (#2744)
-
-<!-- [[[end]]] (sum: fEuiF50wvg) -->
+<!-- [[[end]]] (sum: 0zxqpn7F3B) -->
 
 ---
 
