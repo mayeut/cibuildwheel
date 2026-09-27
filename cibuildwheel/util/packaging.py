@@ -5,13 +5,13 @@ __lazy_modules__ = {
     "cibuildwheel.util.helpers",
     "packaging",
     "packaging.utils",
+    "pathlib",
     "shlex",
 }
 
 import shlex
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
-from typing import TypeVar
 
 from packaging.utils import parse_wheel_filename
 
@@ -139,10 +139,7 @@ def get_pip_version(env: Mapping[str, str]) -> str:
     return pip_version
 
 
-T = TypeVar("T", bound=PurePath)
-
-
-def find_compatible_wheel(wheels: Sequence[T], identifier: str) -> T | None:
+def find_compatible_wheel[T: PurePath](wheels: Sequence[T], identifier: str) -> T | None:
     """
     Finds a wheel with an abi3 or a none ABI tag in `wheels` compatible with the Python interpreter
     specified by `identifier` that is previously built.
