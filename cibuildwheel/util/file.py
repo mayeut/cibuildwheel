@@ -44,7 +44,7 @@ CIBW_CACHE_PATH: Final[Path] = Path(
 
 
 @contextmanager
-def remove_on_error(path: Path) -> Generator[None, None, None]:
+def remove_on_error(path: Path) -> Generator[None]:
     try:
         yield
     except BaseException as original_exception:
