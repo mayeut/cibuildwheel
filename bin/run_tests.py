@@ -8,10 +8,7 @@ import sys
 from pathlib import Path
 
 if __name__ == "__main__":
-    if sys.version_info < (3, 13):
-        default_cpu_count = os.cpu_count() or 2
-    else:
-        default_cpu_count = os.process_cpu_count() or 2
+    default_cpu_count = os.process_cpu_count() or 2
 
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument(

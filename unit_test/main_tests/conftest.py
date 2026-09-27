@@ -63,7 +63,7 @@ def fake_package_dir_autouse(fake_package_dir: list[str]) -> None:
 @pytest.fixture(autouse=True)
 def disable_print_wheels(monkeypatch: pytest.MonkeyPatch) -> None:
     @contextlib.contextmanager
-    def empty_cm(*args: object, **kwargs: object) -> Generator[None, None, None]:
+    def empty_cm(*args: object, **kwargs: object) -> Generator[None]:
         yield
 
     monkeypatch.setattr(Logger, "print_summary", empty_cm)
