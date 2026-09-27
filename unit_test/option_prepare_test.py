@@ -27,7 +27,7 @@ def mock_build_container(monkeypatch: pytest.MonkeyPatch) -> None:
         pass
 
     @contextmanager
-    def nullcontext(enter_result: object = None) -> typing.Generator[object, None, None]:
+    def nullcontext(enter_result: object = None) -> typing.Generator[object]:
         yield enter_result
 
     def ignore_context_call(*args: object, **kwargs: object) -> typing.ContextManager[object]:
