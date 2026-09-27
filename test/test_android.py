@@ -50,10 +50,8 @@ if "ANDROID_HOME" not in os.environ:
 # Many CI services don't support running the Android emulator: see platforms.md.
 supports_emulator = (not ci) or ("GITHUB_ACTIONS" in os.environ and platform.system() == "Linux")
 
-T = typing.TypeVar("T", bound=Callable[..., typing.Any])
 
-
-def needs_emulator(test: T) -> T:
+def needs_emulator[T: Callable[..., typing.Any]](test: T) -> T:
     # All copies of the testbed app run on the same emulator with the same
     # application ID, so these tests must be run serially.
     test = pytest.mark.serial(test)

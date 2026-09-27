@@ -30,7 +30,7 @@ from cibuildwheel.ci import CIProvider, detect_ci_provider, filter_ansi_codes
 TYPE_CHECKING = False
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from typing import IO, AnyStr, Final, Literal
+    from typing import IO, Final, Literal
 
     from cibuildwheel.options import Options
 
@@ -426,7 +426,7 @@ def build_description_from_identifier(identifier: str) -> str:
     return build_description
 
 
-def file_supports_color(file_obj: IO[AnyStr]) -> bool:
+def file_supports_color[T: (str, bytes)](file_obj: IO[T]) -> bool:
     """
     Returns True if the running system's terminal supports color.
     """
@@ -438,11 +438,11 @@ def file_supports_color(file_obj: IO[AnyStr]) -> bool:
     return supported_platform and is_a_tty
 
 
-def file_is_a_tty(file_obj: IO[AnyStr]) -> bool:
+def file_is_a_tty[T: (str, bytes)](file_obj: IO[T]) -> bool:
     return hasattr(file_obj, "isatty") and file_obj.isatty()
 
 
-def file_supports_unicode(file_obj: IO[AnyStr]) -> bool:
+def file_supports_unicode[T: (str, bytes)](file_obj: IO[T]) -> bool:
     encoding = getattr(file_obj, "encoding", None)
     if not encoding:
         return False
