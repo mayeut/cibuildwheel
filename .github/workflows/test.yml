@@ -41,7 +41,7 @@ env:
 jobs:
   lint:
     name: Linters (mypy, ruff, etc.)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -57,7 +57,7 @@ jobs:
   sample:
     name: Generate a sample project
     needs: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -85,7 +85,7 @@ jobs:
       matrix:
         include:
         # Min Python
-        - os: ubuntu-latest
+        - os: ubuntu-26.04
           python_version: '3.11'
         # Max Python
         - os: ubuntu-26.04
@@ -252,7 +252,7 @@ jobs:
   emulated-archs:
     name: Get qemu emulated architectures
     needs: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       archs: ${{ steps.archs.outputs.archs }}
     steps:
@@ -275,7 +275,7 @@ jobs:
   test-emulated:
     name: Test Linux ${{ matrix.arch }} using qemu
     needs: emulated-archs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 180
     strategy:
       matrix:
@@ -302,7 +302,7 @@ jobs:
   test-pyodide:
     name: Test pyodide
     needs: sample
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 180
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -346,7 +346,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: ubuntu-latest
+        - os: ubuntu-26.04
           test_select: android
         - os: windows-latest
         - os: windows-11-arm
