@@ -40,7 +40,7 @@ runs:
       # runner architecture is supported.
       if: inputs.python-path == '' && (runner.arch == 'X64' || runner.arch == 'ARM64')
       with:
-        python-version: "3.11 - 3.14"
+        python-version: "3.11 - 3.15"
         update-environment: false
 
     - id: cibw
