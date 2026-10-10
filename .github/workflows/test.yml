@@ -203,7 +203,7 @@ jobs:
         output-dir: wheelhouse_only
         only: cp313-${{ runner.os == 'Linux' && (runner.arch == 'ARM64' && 'manylinux_aarch64' || 'manylinux_x86_64') || (runner.os == 'Windows' && 'win_amd64' || 'macosx_x86_64') }}
 
-    - name: Create custom configuration file with an empty constraints file for the action
+    - name: Create custom configuration file
       shell: bash
       run: |
         cat > sample_proj/cibw.toml <<EOF
@@ -214,7 +214,6 @@ jobs:
         # Skip musllinux
         skip = "*-musllinux*"
         EOF
-        echo "# no constraints" > sample_proj/no-constraints.txt
 
     - name: Run a sample build (GitHub Action, config-file)
       uses: $/
@@ -225,7 +224,7 @@ jobs:
         package-dir: sample_proj
         output-dir: wheelhouse_config_file
         config-file: sample_proj/cibw.toml
-        constraints-file: sample_proj/no-constraints.txt
+        constraints-file: ${{ runner.os == 'Windows' && 'NUL' || '/dev/null' }}
         # Exercise the system-Python override on Linux.
         python-path: ${{ runner.os == 'Linux' && 'python3' || '' }}
 
