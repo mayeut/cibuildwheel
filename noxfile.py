@@ -173,6 +173,24 @@ def update_constraints(session: nox.Session) -> None:
             env=env,
         )
 
+    # update constraints for the action
+    pyproject = nox.project.load_toml("pyproject.toml")
+    # we only want the minimum version, use "3.99" for max_version
+    min_version = nox.project.python_versions(pyproject, max_version="3.99")[0]
+    output_file = Path("action-constraints.txt")
+    session.run(
+        "uv",
+        "pip",
+        "compile",
+        f"--python-version={min_version}",
+        "--all-extras",
+        "--generate-hashes",
+        "--upgrade",
+        "pyproject.toml",
+        f"--output-file={output_file}",
+        env=env,
+    )
+
 
 @nox.session(default=False, tags=["update"])
 def update_pins(session: nox.Session) -> None:
