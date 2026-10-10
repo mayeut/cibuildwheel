@@ -78,7 +78,7 @@ runs:
                 install_spec = GITHUB_ACTION_PATH
                 if EXTRAS:
                     install_spec += f"[{','.join(sorted(EXTRAS))}]"
-                run([sys.executable, "-m", "pip", "--python", context.env_exe, "install", "--no-require-hashes", "-c", CONSTRAINTS_PATH, install_spec], check=True)
+                run([sys.executable, "-m", "pip", "--python", context.env_exe, "install", "--no-require-hashes", "-c", CONSTRAINTS_PATH, "--build-constraint", CONSTRAINTS_PATH, install_spec], check=True)
 
 
         print("::group::Install cibuildwheel")
