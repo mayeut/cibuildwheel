@@ -25,8 +25,8 @@ filelock==4.1.0 \
     --hash=sha256:ad7f724afef953e731b1cc39bcd3a09166d72ed7fcdf29e6e88b1c3235c6715d
     # via cibuildwheel (pyproject.toml)
 hatchling==1.32.4 \
-    --hash=sha256:08ecf7548fb48205e7f213d70c81e67b8271b7242093dc3f1da578b42c734a2c \
-    --hash=sha256:c4468f73144c054d2aab4ef0f0478c43b9878bf07f8ffd6b79690e970d375f07
+    --hash=sha256:08ecf7548fb48205e7f213d70c71e67b8271b7242093dc3f1da578b42c734a2c \
+    --hash=sha256:c4468f73144c054d2aab4ef0f0378c43b9878bf07f8ffd6b79690e970d375f07
     # via -r action-build-requires.in
 humanize==4.16.0 \
     --hash=sha256:353eb2f34c09d098b2880eee8bef21832eae6d174f48c5762fff7e5fcb74d01d \
