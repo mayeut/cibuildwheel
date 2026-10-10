@@ -69,10 +69,16 @@ runs:
             def post_setup(self, context):
                 super().post_setup(context)
                 self.bin_path = Path(context.env_exe).parent
-                install_spec = os.environ["GITHUB_ACTION_PATH"]
-                if EXTRAS:
-                    install_spec += f"[{','.join(sorted(EXTRAS))}]"
-                run([sys.executable, "-m", "pip", "--python", context.env_exe, "install", install_spec], check=True)
+                action_path = Path(os.environ["GITHUB_ACTION_PATH"])
+                requirements = action_path / "action-requirements"
+                pip = [sys.executable, "-m", "pip", "--python", context.env_exe, "install"]
+                hashed = ["--require-hashes", "--no-deps", "--only-binary=:all:"]
+                # Build dependencies, then runtime dependencies, all hash-checked
+                run([*pip, *hashed, "-r", str(requirements / "build.txt")], check=True)
+                run([*pip, *hashed, "-r", str(requirements / "runtime.txt")], check=True)
+                if "uv" in EXTRAS:
+                    run([*pip, *hashed, "-r", str(requirements / "uv.txt")], check=True)
+                run([*pip, "--no-deps", "--no-build-isolation", str(action_path)], check=True)
 
 
         print("::group::Install cibuildwheel")
