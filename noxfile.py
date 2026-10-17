@@ -177,7 +177,7 @@ def update_constraints(session: nox.Session) -> None:
     pyproject = nox.project.load_toml("pyproject.toml")
     # we only want the minimum version, use "3.99" for max_version
     min_version = nox.project.python_versions(pyproject, max_version="3.99")[0]
-    output_file = Path("action-constraints.txt")
+    output_file = Path(".github/constraints/action.txt")
     # the build dependencies are pinned (with hashes) alongside the runtime ones
     build_requires_file = Path(session.create_tmp()) / "action-build-requires.in"
     build_requires_file.write_text("\n".join(pyproject["build-system"]["requires"]) + "\n")
